@@ -93,7 +93,7 @@ func (r *Redisql) UNIQUE() error {
 	conn.Do("SELECT", r.Database)
 
 	var params []interface{}
-	params = append(params, fmt.Sprintf(REDIS_KEY_UNIQUES, r.Table))
+	params = append(params, fmt.Sprintf(SYS_UNIQUES, r.Table))
 	for i := 0; i < len(r.Fields); i++ {
 		params = append(params, r.Fields[i])
 	}
@@ -121,7 +121,7 @@ func (r *Redisql) CREATE() error {
 	conn.Do("SELECT", r.Database)
 
 	//judge table is exists?
-	exists, err := redigo.Bool(conn.Do("EXISTS", fmt.Sprintf(REDIS_KEY_FIELDS, r.Table)))
+	exists, err := redigo.Bool(conn.Do("EXISTS", fmt.Sprintf(SYS_FIELDS, r.Table)))
 	if err != nil {
 		return err
 	}
@@ -132,7 +132,7 @@ func (r *Redisql) CREATE() error {
 
 	//add table info
 	var params []interface{}
-	params = append(params, fmt.Sprintf(REDIS_KEY_FIELDS, r.Table))
+	params = append(params, fmt.Sprintf(SYS_FIELDS, r.Table))
 	for i := 0; i < len(r.Fields); i++ {
 		params = append(params, r.Fields[i])
 		params = append(params, r.Types[i])
@@ -143,93 +143,5 @@ func (r *Redisql) CREATE() error {
 		return err
 	}
 
-	return nil
-}
-
-func (r *Redisql) INSERT() error {
-	fmt.Println("insert start...data:", *r)
-
-	//check Redisql
-	err := r.check(SQL_INSERT)
-	if err != nil {
-		return err
-	}
-
-	conn := DB.pool.Get()
-	defer conn.Close()
-
-	//change db
-	conn.Do("SELECT", r.Database)
-	exists, err := redigo.Bool(conn.Do("EXISTS", fmt.Sprintf(REDIS_KEY_FIELDS, r.Table)))
-	if err != nil {
-		return err
-	}
-
-	if exists == false {
-		return errors.New(fmt.Sprintf("table %s is not exist.", r.Table))
-	}
-
-	//get table max id
-	var tmpid int
-	row, err := conn.Do("HGET", REDIS_KEY_TABLES_MAX_ID, r.Table)
-	if err != nil {
-		return err
-	} else {
-		if row == nil {
-			tmpid = 0
-		} else {
-			tmpid, err = redigo.Int(row, nil)
-			if err != nil {
-				return err
-			}
-		}
-	}
-
-	tmpid = tmpid + 1
-
-	//get data Info
-	var params []interface{}
-	params = append(params, fmt.Sprintf("%s.%d", r.Table, tmpid))
-	for i := 0; i < len(r.Fields); i++ {
-		exists, err := redigo.Bool(conn.Do("HEXISTS", fmt.Sprintf(REDIS_KEY_FIELDS, r.Table), r.Fields[i]))
-		if err != nil {
-			return err
-		}
-		if exists == false {
-			return errors.New(fmt.Sprintf("no field %s in table %s.", r.Fields[i], r.Table))
-		}
-		params = append(params, r.Fields[i])
-		params = append(params, r.Values[i])
-	}
-
-	//begin work
-	_, err = conn.Do("MULTI")
-	if err != nil {
-		fmt.Println("MULTI", err)
-		return err
-	}
-
-	//insert new data
-	_, err = conn.Do("HMSET", params...)
-	if err != nil {
-		fmt.Println("HMSET", err)
-		conn.Do("DISCARD")
-		return err
-	}
-
-	//update max id
-	_, err = conn.Do("HSET", REDIS_KEY_TABLES_MAX_ID, r.Table, tmpid)
-	if err != nil {
-		fmt.Println("HSET", err)
-		conn.Do("DISCARD")
-		return err
-	}
-
-	_, err = conn.Do("EXEC")
-	if err != nil {
-		fmt.Println("EXEC", err)
-		conn.Do("DISCARD")
-		return err
-	}
 	return nil
 }

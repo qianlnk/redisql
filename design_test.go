@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-func TestInsert(*testing.T) {
+func Testtmp(*testing.T) {
 	Connect("192.168.99.100", "6379", "", "tcp", 5, 120)
 	SelectDB(1)
 	var testRedis Redisql
