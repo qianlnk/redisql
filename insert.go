@@ -13,16 +13,14 @@ import (
 //eg: INTO("user").FIELDS("name, age, city").VALUES("xzj",26,"sh").INSERT()
 
 type Insert struct {
-	Database int
-	Into     string
-	Fields   []string
-	Values   []interface{}
+	Into   string
+	Fields []string
+	Values []interface{}
 }
 
 func INTO(tablename string) *Insert {
 	return &Insert{
-		Database: selectdb,
-		Into:     strings.ToLower(tablename),
+		Into: strings.ToLower(tablename),
 	}
 }
 
@@ -46,9 +44,8 @@ func (ist *Insert) FIELDS(fields ...string) *Insert {
 	}
 
 	return &Insert{
-		Database: ist.Database,
-		Into:     ist.Into,
-		Fields:   tmpFields,
+		Into:   ist.Into,
+		Fields: tmpFields,
 	}
 }
 
@@ -62,21 +59,18 @@ func (ist *Insert) VALUES(values ...interface{}) *Insert {
 		os.Exit(1)
 	}
 	return &Insert{
-		Database: ist.Database,
-		Into:     ist.Into,
-		Fields:   ist.Fields,
-		Values:   values,
+		Into:   ist.Into,
+		Fields: ist.Fields,
+		Values: values,
 	}
 }
 
 func (ist *Insert) INSERT() error {
 	fmt.Println("insert start...data:", *ist)
 
-	conn := DB.pool.Get()
+	conn := getConn(redisdb)
 	defer conn.Close()
 
-	//change db
-	conn.Do("SELECT", ist.Database)
 	exists, err := redigo.Bool(conn.Do("EXISTS", fmt.Sprintf(SYS_FIELDS, ist.Into)))
 	if err != nil {
 		return err

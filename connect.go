@@ -74,7 +74,7 @@ func Connect(server, port, password, protocol string, idleMax, idleTimeput int) 
 
 func Select(db int) {
 	fmt.Println("select db start...")
-	selectdb = db
+	redisdb = db
 }
 
 func ChangeDatabase(db string) {
@@ -90,4 +90,8 @@ func ChangeDatabase(db string) {
 	}
 
 	database = db
+}
+
+func GetDbInfo() (int, string) {
+	return redisdb, database
 }

@@ -39,6 +39,6 @@ type RedisConnect struct {
 var (
 	DB RedisConnect
 	//As redis is a single thread
-	selectdb int
+	redisdb  int
 	database string
 )

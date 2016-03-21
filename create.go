@@ -38,11 +38,9 @@ func CreateDatabase(dbname string) error {
 }
 
 type Table struct {
-	RedisDB  int
-	Database string
-	Name     string
-	Fields   []string
-	Types    []string
+	Name   string
+	Fields []string
+	Types  []string
 }
 
 func TABLE(tablename string) *Table {
@@ -56,9 +54,7 @@ func TABLE(tablename string) *Table {
 		os.Exit(1)
 	}
 	return &Table{
-		RedisDB:  selectdb,
-		Database: database,
-		Name:     tablename,
+		Name: tablename,
 	}
 }
 
@@ -77,10 +73,8 @@ func (tab *Table) FIELDS(fields ...string) *Table {
 	}
 
 	return &Table{
-		RedisDB:  tab.RedisDB,
-		Database: tab.Database,
-		Name:     tab.Name,
-		Fields:   tmpFields,
+		Name:   tab.Name,
+		Fields: tmpFields,
 	}
 }
 
@@ -101,39 +95,34 @@ func (tab *Table) TYPES(types ...string) *Table {
 		os.Exit(1)
 	}
 	return &Table{
-		RedisDB:  tab.RedisDB,
-		Database: tab.Database,
-		Name:     tab.Name,
-		Fields:   tab.Fields,
-		Types:    tmpTypes,
+		Name:   tab.Name,
+		Fields: tab.Fields,
+		Types:  tmpTypes,
 	}
 }
 
 func (tab *Table) CREATE() error {
 	fmt.Println("create start...data:", *tab)
 
-	conn := getConn()
+	conn := getConn(redisdb)
 	defer conn.Close()
 
-	//change db
-	conn.Do("SELECT", tab.RedisDB)
-
 	//judge table is exists?
-	exists := existsTable(tab.Database, tab.Name)
+	exists := existsTable(tab.Name)
 	if exists == true {
 		return errors.New(fmt.Sprintf("table %s is exist.", tab.Name))
 	}
 
 	//add table info
 	var params []interface{}
-	params = append(params, fmt.Sprintf(REDISQL_FIELDS, tab.Database, tab.Name))
+	params = append(params, fmt.Sprintf(REDISQL_FIELDS, database, tab.Name))
 	for i := 0; i < len(tab.Fields); i++ {
 		params = append(params, tab.Fields[i])
 		params = append(params, tab.Types[i])
 	}
 
 	//get TableNumber
-	tabNum, err := getTableNumber(tab.Database)
+	tabNum, err := getTableNumber()
 	if err != nil {
 		return err
 	}
@@ -146,19 +135,19 @@ func (tab *Table) CREATE() error {
 		return err
 	}
 
-	_, err = conn.Do("HSET", fmt.Sprintf(REDISQL_TABLES, tab.Database), tab.Name, 0)
+	_, err = conn.Do("HSET", fmt.Sprintf(REDISQL_TABLES, database), tab.Name, 0)
 	if err != nil {
 		conn.Do("DISCARD")
 		return err
 	}
 
-	_, err = conn.Do("HSET", fmt.Sprintf(REDISQL_COUNT, tab.Database), tab.Name, 0)
+	_, err = conn.Do("HSET", fmt.Sprintf(REDISQL_COUNT, database), tab.Name, 0)
 	if err != nil {
 		conn.Do("DISCARD")
 		return err
 	}
 
-	_, err = conn.Do("HSET", REDISQL_DATABASES, tab.Database, tabNum+1)
+	_, err = conn.Do("HSET", REDISQL_DATABASES, database, tabNum+1)
 	if err != nil {
 		conn.Do("DISCARD")
 		return err
@@ -175,38 +164,37 @@ func (tab *Table) CREATE() error {
 func (tab *Table) INDEX() error {
 	fmt.Println("index start...date:", tab)
 
-	conn := getConn()
+	conn := getConn(redisdb)
 	defer conn.Close()
 
-	conn.Do("SELECT", tab.Database)
 	//judge table is exists?
-	exists := existsTable(tab.Database, tab.Name)
+	exists := existsTable(tab.Name)
 	if exists == false {
 		return errors.New(fmt.Sprintf("table %s is not exist.", tab.Name))
 	}
 
 	indexname := "index"
 	for _, f := range tab.Fields {
-		if existsField(tab.Database, tab.Name, f) == false {
+		if existsField(tab.Name, f) == false {
 			return errors.New(fmt.Sprintf("no field %s in table %s.", f, tab.Name))
 		}
 		indexname += "_"
 		indexname += f
 	}
 	//judge index is exists?
-	if existsIndex(tab.Database, tab.Name, indexname) == true {
+	if existsIndex(tab.Name, indexname) == true {
 		return errors.New(fmt.Sprintf("index %s is exist.", tab.Name))
 	}
 	//save index
-	_, err := conn.Do("HSET", fmt.Sprintf(REDISQL_INDEXS, tab.Database, tab.Name), indexname, tab.Fields)
+	_, err := conn.Do("HSET", fmt.Sprintf(REDISQL_INDEXS, database, tab.Name), indexname, tab.Fields)
 	if err != nil {
 		return err
 	}
 
 	//add index
 	//get all data
-	fmt.Println(fmt.Sprintf(REDISQL_DATAS, tab.Database, tab.Name, "*"))
-	rows, err := redigo.Strings(conn.Do("KEYS", fmt.Sprintf(REDISQL_DATAS, tab.Database, tab.Name, "*")))
+	fmt.Println(fmt.Sprintf(REDISQL_DATAS, database, tab.Name, "*"))
+	rows, err := redigo.Strings(conn.Do("KEYS", fmt.Sprintf(REDISQL_DATAS, database, tab.Name, "*")))
 	if err != nil {
 		return err
 	}
@@ -226,7 +214,7 @@ func (tab *Table) INDEX() error {
 		}
 		fmt.Println(indexField)
 		ids := strings.Split(r, ".")
-		_, err := conn.Do("SADD", fmt.Sprintf(REDISQL_INDEX_DATAS, tab.Database, tab.Name, indexField), ids[len(ids)-1])
+		_, err := conn.Do("SADD", fmt.Sprintf(REDISQL_INDEX_DATAS, database, tab.Name, indexField), ids[len(ids)-1])
 		if err != nil {
 			return err
 		}
