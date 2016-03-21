@@ -36,16 +36,9 @@ type RedisConnect struct {
 	pool        *redis.Pool
 }
 
-type Redisql struct {
-	Database int
-	Table    string
-	Fields   []string
-	Types    []string
-	Values   []interface{}
-}
-
 var (
-	DB       RedisConnect
+	DB RedisConnect
+	//As redis is a single thread
 	selectdb int
 	database string
 )
