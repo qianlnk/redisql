@@ -3,6 +3,8 @@ package redisql
 import (
 	"fmt"
 	"github.com/garyburd/redigo/redis"
+	"os"
+	"strings"
 	"time"
 )
 
@@ -70,16 +72,22 @@ func Connect(server, port, password, protocol string, idleMax, idleTimeput int) 
 	}
 }
 
-func SelectDB(db int) {
+func Select(db int) {
 	fmt.Println("select db start...")
 	selectdb = db
 }
 
-func GetDB() RedisConnect {
-	fmt.Println("get db start...")
-	return DB
-}
+func ChangeDatabase(db string) {
+	fmt.Println("change database start...")
+	if len(strings.Trim(db, " ")) <= 0 {
+		fmt.Errorf("can not change database to ''.")
+		os.Exit(1)
+	}
 
-func GetConn(db int) redis.Conn {
-	return DB.pool.Get()
+	if existsDatabase(db) == false {
+		fmt.Errorf(fmt.Sprintf("no database named '%s', please call func 'CreateDatabase'.", db))
+		os.Exit(1)
+	}
+
+	database = db
 }

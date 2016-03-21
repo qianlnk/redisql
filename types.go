@@ -5,6 +5,15 @@ import (
 )
 
 const (
+	REDISQL_DATABASES   = "databases"       //hset databases lnkgift 1
+	REDISQL_TABLES      = "%s.tables"       //hset lnkgift.tables user 1
+	REDISQL_COUNT       = "%s.tables.count" //hset lnkgift.tables.count user 1
+	REDISQL_FIELDS      = "%s.%s.fields"    //hset lnkgift.user.fields name string
+	REDISQL_UNIQUE      = "%s.%s.unique"    //sadd lnkgift.user.unique name
+	REDISQL_INDEXS      = "%s.%s.indexs"    //hset lnkgift.user.indexs index_name [name]
+	REDISQL_DATAS       = "%s.%s.data.%s"   //hset lnkgift.user.1 name qianno
+	REDISQL_INDEX_DATAS = "%s.%s.index.%s"  //sadd lnkgift.user.name.qianno 1
+
 	SYS_TABLES_MAX_ID = "sys_tables_max_id"        //hset sys_tables_max_id tablename maxid
 	SYS_INDEXS        = "sys_indexs.table:%s"      //hset sys_indexs.table:tablename indexname fields
 	SYS_FIELDS        = "sys_fields.table:%s"      //hset sys_fields.table:tablename field type
@@ -38,4 +47,5 @@ type Redisql struct {
 var (
 	DB       RedisConnect
 	selectdb int
+	database string
 )

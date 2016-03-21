@@ -1,14 +1,15 @@
 package redisql_test
 
 import (
-	"fmt"
+	//"fmt"
 	"qianno.xie/redisql"
 	"testing"
 )
 
 func TestConnect(*testing.T) {
 	redisql.Connect("192.168.99.100", "6379", "", "tcp", 5, 120)
-	myDB := redisql.GetConn(0)
-	res, err := myDB.Do("SET", "test", "test123")
-	fmt.Print(res, err)
+	//	myDB := redisql.getConn()
+	//	defer myDB.Close()
+	//	res, err := myDB.Do("SET", "test", "test123")
+	//	fmt.Print(res, err)
 }

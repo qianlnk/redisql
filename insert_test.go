@@ -7,7 +7,7 @@ import (
 
 func TestInsert(*testing.T) {
 	Connect("127.0.0.1", "6379", "", "tcp", 5, 120)
-	SelectDB(1)
+	Select(1)
 	err := INTO("task").FIELDS("name, level", "count").VALUES("redisql", 1, 2).INSERT()
 	fmt.Println(err)
 	err = INTO("task").FIELDS("name, level", "count").VALUES("redisql", 3, 4).INSERT()
