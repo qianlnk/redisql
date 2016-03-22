@@ -15,3 +15,9 @@ err := redisql.TABLE("user").FIELDS("name").INDEX()
 err := redisql.TABLE("user").FIELDS("age, city").INDEX()
 #insert new data
 err := INTO("user").FIELDS("name, age", "city").VALUES("qianlnk", 25, "sh").INSERT()
+#drop
+comming soon
+#delete
+comming soon
+#select
+comming soon
