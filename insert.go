@@ -71,7 +71,7 @@ func (ist *Insert) VALUES(values ...interface{}) *Insert {
 func (ist *Insert) INSERT() error {
 	fmt.Println("insert start...data:", *ist)
 
-	conn := getConn(redisdb)
+	conn := getConn()
 	defer conn.Close()
 
 	if existsTable(ist.Into) == false {
@@ -95,34 +95,10 @@ func (ist *Insert) INSERT() error {
 		params = append(params, ist.Values[i])
 	}
 
-	//get table count
-	count, err := getCount(ist.Into)
-	if err != nil {
-		return err
-	}
-	count += 1
-
 	//get table indexs
 	indexs, err := getIndexs(ist.Into)
 	if err != nil {
 		return err
-	}
-
-	//get index data
-	var indexdata string
-	for _, v := range indexs {
-		flag := 0
-		for _, ixf := range v {
-			for i, f := range ist.Fields {
-				if ixf == f {
-					if flag >= 1 {
-						indexdata += "."
-					}
-					flag += 1
-					indexdata += fmt.Sprintf("%s.%v", f, ist.Values[i])
-				}
-			}
-		}
 	}
 
 	//begin work
@@ -147,17 +123,32 @@ func (ist *Insert) INSERT() error {
 	}
 
 	//update table count
-	_, err = conn.Do("HSET", fmt.Sprintf(REDISQL_COUNT, database), ist.Into, count)
+	_, err = conn.Do("HINCRBY", fmt.Sprintf(REDISQL_COUNT, database), ist.Into, 1)
 	if err != nil {
 		conn.Do("DISCARD")
 		return err
 	}
 
 	//add new indexdata
-	_, err = conn.Do("SADD", fmt.Sprintf(REDISQL_INDEX_DATAS, database, ist.Into, indexdata), tmpid)
-	if err != nil {
-		conn.Do("DISCARD")
-		return err
+	for _, v := range indexs {
+		flag := 0
+		var indexdata string
+		for _, ixf := range v {
+			for i, f := range ist.Fields {
+				if ixf == f {
+					if flag >= 1 {
+						indexdata += "."
+					}
+					flag += 1
+					indexdata += fmt.Sprintf("%s.%v", f, ist.Values[i])
+				}
+			}
+		}
+		_, err = conn.Do("SADD", fmt.Sprintf(REDISQL_INDEX_DATAS, database, ist.Into, indexdata), tmpid)
+		if err != nil {
+			conn.Do("DISCARD")
+			return err
+		}
 	}
 
 	_, err = conn.Do("EXEC")

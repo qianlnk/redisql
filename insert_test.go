@@ -7,9 +7,10 @@ import (
 
 func TestInsert(*testing.T) {
 	Connect("127.0.0.1", "6379", "", "tcp", 5, 120)
-	Select(0)
+	Selectdb(0)
 	ChangeDatabase("lnkgift")
-	err := INTO("user").FIELDS("name, age", "city").VALUES("xzj", 24, "hk").INSERT()
+	err := INTO("log").FIELDS("userid", "operate", "detail", "data").VALUES(1, "login", "login at sh", "2016-03-22 04:00:00").INSERT()
+	err = INTO("log").FIELDS("userid", "operate", "detail", "data").VALUES(1, "insert", "self info", "2016-03-22 04:01:00").INSERT()
 	fmt.Println(err)
 }
 

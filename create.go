@@ -26,7 +26,7 @@ func CreateDatabase(dbname string) error {
 		return errors.New(fmt.Sprintf("database:%s exists.\n", db))
 	}
 
-	conn := DB.pool.Get()
+	conn := getConn()
 	defer conn.Close()
 
 	_, err := conn.Do("HSET", REDISQL_DATABASES, db, 0)
@@ -104,7 +104,7 @@ func (tab *Table) TYPES(types ...string) *Table {
 func (tab *Table) CREATE() error {
 	fmt.Println("create start...data:", *tab)
 
-	conn := getConn(redisdb)
+	conn := getConn()
 	defer conn.Close()
 
 	//judge table is exists?
@@ -121,12 +121,7 @@ func (tab *Table) CREATE() error {
 		params = append(params, tab.Types[i])
 	}
 
-	//get TableNumber
-	tabNum, err := getTableNumber()
-	if err != nil {
-		return err
-	}
-	_, err = conn.Do("MULTI")
+	_, err := conn.Do("MULTI")
 	if err != nil {
 		return err
 	}
@@ -147,7 +142,8 @@ func (tab *Table) CREATE() error {
 		return err
 	}
 
-	_, err = conn.Do("HSET", REDISQL_DATABASES, database, tabNum+1)
+	//tablenumber +1
+	_, err = conn.Do("HINCRBY", REDISQL_DATABASES, database, 1)
 	if err != nil {
 		conn.Do("DISCARD")
 		return err
@@ -164,7 +160,7 @@ func (tab *Table) CREATE() error {
 func (tab *Table) INDEX() error {
 	fmt.Println("index start...date:", tab)
 
-	conn := getConn(redisdb)
+	conn := getConn()
 	defer conn.Close()
 
 	//judge table is exists?

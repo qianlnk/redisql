@@ -72,7 +72,7 @@ func Connect(server, port, password, protocol string, idleMax, idleTimeput int) 
 	}
 }
 
-func Select(db int) {
+func Selectdb(db int) {
 	fmt.Println("select db start...")
 	redisdb = db
 }

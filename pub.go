@@ -6,9 +6,9 @@ import (
 	"strings"
 )
 
-func getConn(db int) redigo.Conn {
+func getConn() redigo.Conn {
 	conn := DB.pool.Get()
-	conn.Do("SELECT", db)
+	conn.Do("SELECT", redisdb)
 	return conn
 }
 
@@ -16,7 +16,7 @@ func getConn(db int) redigo.Conn {
 func existsDatabase(dbname string) bool {
 	fmt.Println("exists database %s start...", dbname)
 
-	conn := getConn(redisdb)
+	conn := getConn()
 	defer conn.Close()
 	exists, err := redigo.Bool(conn.Do("HEXISTS", REDISQL_DATABASES, dbname))
 	if err != nil {
@@ -30,7 +30,7 @@ func existsDatabase(dbname string) bool {
 func getDatabases() []string {
 	fmt.Println("get databaases start...")
 
-	conn := getConn(redisdb)
+	conn := getConn()
 	defer conn.Close()
 
 	dbs, err := redigo.Strings(conn.Do("HKEYS", REDISQL_DATABASES))
@@ -43,7 +43,7 @@ func getDatabases() []string {
 
 func getTableNumber() (int, error) {
 	fmt.Println("get " + database + " table number start...")
-	conn := getConn(redisdb)
+	conn := getConn()
 	defer conn.Close()
 
 	num, err := redigo.Int(conn.Do("HGET", REDISQL_DATABASES, database))
@@ -58,7 +58,7 @@ func getTableNumber() (int, error) {
 func existsTable(tablename string) bool {
 	fmt.Println("exists table %s.%s start...", database, tablename)
 
-	conn := getConn(redisdb)
+	conn := getConn()
 	defer conn.Close()
 
 	exists, err := redigo.Bool(conn.Do("HEXISTS", fmt.Sprintf(REDISQL_TABLES, database), tablename))
@@ -72,7 +72,7 @@ func existsTable(tablename string) bool {
 func getTables() []string {
 	fmt.Println("get %s tables start...", database)
 
-	conn := getConn(redisdb)
+	conn := getConn()
 	defer conn.Close()
 
 	tables, err := redigo.Strings(conn.Do("HKEYS", fmt.Sprintf(REDISQL_TABLES, database)))
@@ -86,7 +86,7 @@ func getTables() []string {
 func getCount(tablename string) (int, error) {
 	fmt.Println("get " + tablename + " count start...")
 
-	conn := getConn(redisdb)
+	conn := getConn()
 	defer conn.Close()
 
 	return redigo.Int(conn.Do("HGET", fmt.Sprintf(REDISQL_COUNT, database), tablename))
@@ -95,7 +95,7 @@ func getCount(tablename string) (int, error) {
 func getNextId(tablename string) (int, error) {
 	fmt.Println("get %s %s last id start...", database, tablename)
 
-	conn := getConn(redisdb)
+	conn := getConn()
 	defer conn.Close()
 
 	tmpid, err := redigo.Int(conn.Do("HGET", fmt.Sprintf(REDISQL_TABLES, database), tablename))
@@ -110,7 +110,7 @@ func getNextId(tablename string) (int, error) {
 func existsField(tablename, fieldname string) bool {
 	fmt.Println("exists field:%s start...", fieldname)
 
-	conn := getConn(redisdb)
+	conn := getConn()
 	defer conn.Close()
 
 	exists, err := redigo.Bool(conn.Do("HEXISTS", fmt.Sprintf(REDISQL_FIELDS, database, tablename), fieldname))
@@ -126,7 +126,7 @@ func existsField(tablename, fieldname string) bool {
 func existsIndex(tablename, indexname string) bool {
 	fmt.Println("exists %s %s index %s start...", database, tablename, indexname)
 
-	conn := getConn(redisdb)
+	conn := getConn()
 	defer conn.Close()
 
 	exists, err := redigo.Bool(conn.Do("HEXISTS", fmt.Sprintf(REDISQL_INDEXS, database, tablename), indexname))
@@ -142,7 +142,7 @@ func getIndexs(tablename string) (map[string][]string, error) {
 	fmt.Println("get %s %s indexs start...", database, tablename)
 	indexs := make(map[string][]string)
 
-	conn := getConn(redisdb)
+	conn := getConn()
 	defer conn.Close()
 
 	indexnames, err := redigo.Strings(conn.Do("HKEYS", fmt.Sprintf(REDISQL_INDEXS, database, tablename)))
