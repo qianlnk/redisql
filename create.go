@@ -54,7 +54,7 @@ func TABLE(tablename string) *Table {
 		os.Exit(1)
 	}
 	return &Table{
-		Name: tablename,
+		Name: strings.ToLower(strings.Trim(tablename, "")),
 	}
 }
 

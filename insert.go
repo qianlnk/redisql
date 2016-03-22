@@ -3,7 +3,6 @@ package redisql
 import (
 	"errors"
 	"fmt"
-	redigo "github.com/garyburd/redigo/redis"
 	"os"
 	"strconv"
 	"strings"
@@ -19,28 +18,32 @@ type Insert struct {
 }
 
 func INTO(tablename string) *Insert {
+	fmt.Println("into start...")
+	if len(database) <= 0 {
+		fmt.Errorf("you have not choose database, please call func 'ChangeDatabase'.")
+		os.Exit(1)
+	}
+	if len(strings.Trim(tablename, "")) <= 0 {
+		fmt.Errorf("tablename can not be null.")
+		os.Exit(1)
+	}
 	return &Insert{
-		Into: strings.ToLower(tablename),
+		Into: strings.ToLower(strings.Trim(tablename, "")),
 	}
 }
 
 func (ist *Insert) FIELDS(fields ...string) *Insert {
-	if ist.Into == "" {
-		fmt.Errorf("table name is null, please call func 'INTO'.")
-		os.Exit(1)
-	}
-
-	if len(fields) <= 0 {
-		fmt.Errorf("can not call this func without fields.")
-		os.Exit(1)
-	}
-
 	var tmpFields []string
 	for _, f := range fields {
 		tmpf := strings.Split(f, ",")
 		for _, ff := range tmpf {
 			tmpFields = append(tmpFields, strings.ToLower(strings.Trim(ff, " ")))
 		}
+	}
+
+	if len(tmpFields) <= 0 {
+		fmt.Errorf("can not call this func without fields.")
+		os.Exit(1)
 	}
 
 	return &Insert{
@@ -71,46 +74,55 @@ func (ist *Insert) INSERT() error {
 	conn := getConn(redisdb)
 	defer conn.Close()
 
-	exists, err := redigo.Bool(conn.Do("EXISTS", fmt.Sprintf(SYS_FIELDS, ist.Into)))
-	if err != nil {
-		return err
-	}
-
-	if exists == false {
+	if existsTable(ist.Into) == false {
 		return errors.New(fmt.Sprintf("table %s is not exist.", ist.Into))
 	}
 
 	//get table max id
-	var tmpid int
-	row, err := conn.Do("HGET", SYS_TABLES_MAX_ID, ist.Into)
+	tmpid, err := getNextId(ist.Into)
 	if err != nil {
 		return err
-	} else {
-		if row == nil {
-			tmpid = 0
-		} else {
-			tmpid, err = redigo.Int(row, nil)
-			if err != nil {
-				return err
-			}
-		}
 	}
-
-	tmpid = tmpid + 1
 
 	//get data Info
 	var params []interface{}
-	params = append(params, fmt.Sprintf(USER_TABLE, ist.Into, strconv.Itoa(tmpid)))
+	params = append(params, fmt.Sprintf(REDISQL_DATAS, database, ist.Into, strconv.Itoa(tmpid)))
 	for i := 0; i < len(ist.Fields); i++ {
-		exists, err := redigo.Bool(conn.Do("HEXISTS", fmt.Sprintf(SYS_FIELDS, ist.Into), ist.Fields[i]))
-		if err != nil {
-			return err
-		}
-		if exists == false {
+		if existsField(ist.Into, ist.Fields[i]) == false {
 			return errors.New(fmt.Sprintf("no field %s in table %s.", ist.Fields[i], ist.Into))
 		}
 		params = append(params, ist.Fields[i])
 		params = append(params, ist.Values[i])
+	}
+
+	//get table count
+	count, err := getCount(ist.Into)
+	if err != nil {
+		return err
+	}
+	count += 1
+
+	//get table indexs
+	indexs, err := getIndexs(ist.Into)
+	if err != nil {
+		return err
+	}
+
+	//get index data
+	var indexdata string
+	for _, v := range indexs {
+		flag := 0
+		for _, ixf := range v {
+			for i, f := range ist.Fields {
+				if ixf == f {
+					if flag >= 1 {
+						indexdata += "."
+					}
+					flag += 1
+					indexdata += fmt.Sprintf("%s.%v", f, ist.Values[i])
+				}
+			}
+		}
 	}
 
 	//begin work
@@ -123,22 +135,33 @@ func (ist *Insert) INSERT() error {
 	//insert new data
 	_, err = conn.Do("HMSET", params...)
 	if err != nil {
-		fmt.Println("HMSET", err)
 		conn.Do("DISCARD")
 		return err
 	}
 
 	//update max id
-	_, err = conn.Do("HSET", SYS_TABLES_MAX_ID, ist.Into, tmpid)
+	_, err = conn.Do("HSET", fmt.Sprintf(REDISQL_TABLES, database), ist.Into, tmpid)
 	if err != nil {
-		fmt.Println("HSET", err)
+		conn.Do("DISCARD")
+		return err
+	}
+
+	//update table count
+	_, err = conn.Do("HSET", fmt.Sprintf(REDISQL_COUNT, database), ist.Into, count)
+	if err != nil {
+		conn.Do("DISCARD")
+		return err
+	}
+
+	//add new indexdata
+	_, err = conn.Do("SADD", fmt.Sprintf(REDISQL_INDEX_DATAS, database, ist.Into, indexdata), tmpid)
+	if err != nil {
 		conn.Do("DISCARD")
 		return err
 	}
 
 	_, err = conn.Do("EXEC")
 	if err != nil {
-		fmt.Println("EXEC", err)
 		conn.Do("DISCARD")
 		return err
 	}

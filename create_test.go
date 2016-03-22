@@ -18,7 +18,7 @@ func TestCreate(*testing.T) {
 	Connect("127.0.0.1", "6379", "", "tcp", 5, 120)
 	Select(0)
 	ChangeDatabase("lnkgift")
-	err := TABLE("user").FIELDS("name", "age", "city").TYPES("string", "int", "string").CREATE()
+	err := TABLE("task").FIELDS("userid", "name", "level", "count").TYPES("int", "string", "int, int").CREATE()
 	fmt.Println(err)
 }
 

@@ -3,6 +3,7 @@ package redisql
 import (
 	"fmt"
 	redigo "github.com/garyburd/redigo/redis"
+	"strings"
 )
 
 func getConn(db int) redigo.Conn {
@@ -82,6 +83,15 @@ func getTables() []string {
 	return tables
 }
 
+func getCount(tablename string) (int, error) {
+	fmt.Println("get " + tablename + " count start...")
+
+	conn := getConn(redisdb)
+	defer conn.Close()
+
+	return redigo.Int(conn.Do("HGET", fmt.Sprintf(REDISQL_COUNT, database), tablename))
+}
+
 func getNextId(tablename string) (int, error) {
 	fmt.Println("get %s %s last id start...", database, tablename)
 
@@ -128,7 +138,7 @@ func existsIndex(tablename, indexname string) bool {
 	return exists
 }
 
-func getIndexs(tablename string) map[string][]string {
+func getIndexs(tablename string) (map[string][]string, error) {
 	fmt.Println("get %s %s indexs start...", database, tablename)
 	indexs := make(map[string][]string)
 
@@ -137,18 +147,16 @@ func getIndexs(tablename string) map[string][]string {
 
 	indexnames, err := redigo.Strings(conn.Do("HKEYS", fmt.Sprintf(REDISQL_INDEXS, database, tablename)))
 	if err != nil {
-		fmt.Errorf(err.Error())
-		return nil
+		return nil, err
 	}
 
 	for _, ix := range indexnames {
-		fieldnames, err := redigo.Strings(conn.Do("HGET", fmt.Sprintf(REDISQL_INDEXS, database, tablename), ix))
+		fieldnames, err := redigo.String(conn.Do("HGET", fmt.Sprintf(REDISQL_INDEXS, database, tablename), ix))
 		if err != nil {
-			fmt.Errorf(err.Error())
-			return nil
+			return nil, err
 		}
-		indexs[ix] = fieldnames
+		indexs[ix] = strings.Split(strings.Replace(strings.Replace(fieldnames, "[", "", -1), "]", "", -1), " ")
 	}
 
-	return indexs
+	return indexs, nil
 }
