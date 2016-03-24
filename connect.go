@@ -1,9 +1,9 @@
 package redisql
 
 import (
+	"errors"
 	"fmt"
 	"github.com/garyburd/redigo/redis"
-	"os"
 	"strings"
 	"time"
 )
@@ -80,13 +80,11 @@ func Selectdb(db int) {
 func ChangeDatabase(db string) {
 	fmt.Println("change database start...")
 	if len(strings.Trim(db, " ")) <= 0 {
-		fmt.Errorf("can not change database to ''.")
-		os.Exit(1)
+		panic(errors.New(fmt.Sprintf("can not change database to ''.")))
 	}
 
 	if existsDatabase(db) == false {
-		fmt.Errorf(fmt.Sprintf("no database named '%s', please call func 'CreateDatabase'.", db))
-		os.Exit(1)
+		panic(fmt.Sprintf("no database named '%s', please call func 'CreateDatabase'.", db))
 	}
 
 	database = db

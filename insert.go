@@ -3,7 +3,6 @@ package redisql
 import (
 	"errors"
 	"fmt"
-	"os"
 	"strconv"
 	"strings"
 )
@@ -20,12 +19,10 @@ type Insert struct {
 func INTO(tablename string) *Insert {
 	fmt.Println("into start...")
 	if len(database) <= 0 {
-		fmt.Errorf("you have not choose database, please call func 'ChangeDatabase'.")
-		os.Exit(1)
+		panic("you have not choose database, please call func 'ChangeDatabase'.")
 	}
 	if len(strings.Trim(tablename, "")) <= 0 {
-		fmt.Errorf("tablename can not be null.")
-		os.Exit(1)
+		panic("tablename can not be null.")
 	}
 	return &Insert{
 		Into: strings.ToLower(strings.Trim(tablename, "")),
@@ -42,8 +39,7 @@ func (ist *Insert) FIELDS(fields ...string) *Insert {
 	}
 
 	if len(tmpFields) <= 0 {
-		fmt.Errorf("can not call this func without fields.")
-		os.Exit(1)
+		panic("can not call this func without fields.")
 	}
 
 	return &Insert{
@@ -54,12 +50,10 @@ func (ist *Insert) FIELDS(fields ...string) *Insert {
 
 func (ist *Insert) VALUES(values ...interface{}) *Insert {
 	if len(ist.Fields) <= 0 {
-		fmt.Errorf("fields is null, please call func 'FIELDS'.")
-		os.Exit(1)
+		panic("fields is null, please call func 'FIELDS'.")
 	}
 	if len(ist.Fields) != len(values) {
-		fmt.Errorf("Field and value are not correspondence, please check.")
-		os.Exit(1)
+		panic("Field and value are not correspondence, please check.")
 	}
 	return &Insert{
 		Into:   ist.Into,

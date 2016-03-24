@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	redigo "github.com/garyburd/redigo/redis"
-	"os"
 	"strings"
 )
 
@@ -46,12 +45,10 @@ type Table struct {
 func TABLE(tablename string) *Table {
 	fmt.Println("table start...")
 	if len(database) <= 0 {
-		fmt.Errorf("you have not choose database, please call func 'ChangeDatabase'.")
-		os.Exit(1)
+		panic("you have not choose database, please call func 'ChangeDatabase'.")
 	}
 	if len(strings.Trim(tablename, "")) <= 0 {
-		fmt.Errorf("tablename can not be null.")
-		os.Exit(1)
+		panic("tablename can not be null.")
 	}
 	return &Table{
 		Name: strings.ToLower(strings.Trim(tablename, "")),
@@ -68,8 +65,7 @@ func (tab *Table) FIELDS(fields ...string) *Table {
 	}
 
 	if len(tmpFields) <= 0 {
-		fmt.Errorf("can not call this func without fields.")
-		os.Exit(1)
+		panic("can not call this func without fields.")
 	}
 
 	return &Table{
@@ -80,8 +76,7 @@ func (tab *Table) FIELDS(fields ...string) *Table {
 
 func (tab *Table) TYPES(types ...string) *Table {
 	if len(tab.Fields) <= 0 {
-		fmt.Errorf("fields is null, please call func 'FIELDS'.")
-		os.Exit(1)
+		panic("fields is null, please call func 'FIELDS'.")
 	}
 	var tmpTypes []string
 	for _, t := range types {
@@ -91,8 +86,7 @@ func (tab *Table) TYPES(types ...string) *Table {
 		}
 	}
 	if len(tab.Fields) != len(tmpTypes) {
-		fmt.Errorf("Field and types are not correspondence, please check.")
-		os.Exit(1)
+		panic("Field and types are not correspondence, please check.")
 	}
 	return &Table{
 		Name:   tab.Name,
