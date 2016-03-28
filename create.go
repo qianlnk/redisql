@@ -5,6 +5,7 @@ import (
 	"fmt"
 	redigo "github.com/garyburd/redigo/redis"
 	"strings"
+	"time"
 )
 
 //how to use?
@@ -82,6 +83,11 @@ func (tab *Table) TYPES(types ...string) *Table {
 	for _, t := range types {
 		tmpt := strings.Split(t, ",")
 		for _, tt := range tmpt {
+			if strings.ToLower(strings.Trim(tt, " ")) != REDISQL_TYPE_NUMBER &&
+				strings.ToLower(strings.Trim(tt, " ")) != REDISQL_TYPE_STRING &&
+				strings.ToLower(strings.Trim(tt, " ")) != REDISQL_TYPE_DATE {
+				panic("Redisql not such type like " + strings.ToLower(strings.Trim(tt, " ")))
+			}
 			tmpTypes = append(tmpTypes, strings.ToLower(strings.Trim(tt, " ")))
 		}
 	}
@@ -181,6 +187,14 @@ func (tab *Table) INDEX() error {
 		return err
 	}
 
+	var fieldtype string
+	if len(tab.Fields) == 1 {
+		fieldtype, err = getFieldType(tab.Name, tab.Fields[0])
+		if err != nil {
+			return err
+		}
+	}
+
 	//add index
 	//get all data
 	fmt.Println(fmt.Sprintf(REDISQL_DATAS, database, tab.Name, "*"))
@@ -204,9 +218,28 @@ func (tab *Table) INDEX() error {
 		}
 		fmt.Println(indexField)
 		ids := strings.Split(r, ".")
-		_, err := conn.Do("SADD", fmt.Sprintf(REDISQL_INDEX_DATAS, database, tab.Name, indexField), ids[len(ids)-1])
-		if err != nil {
-			return err
+		if fieldtype == "" || fieldtype == REDISQL_TYPE_STRING {
+			_, err := conn.Do("SADD", fmt.Sprintf(REDISQL_INDEX_DATAS, database, tab.Name, indexField), ids[len(ids)-1])
+			if err != nil {
+				return err
+			}
+		} else {
+			kv := strings.Split(indexField, ".")
+			var score string
+			if fieldtype == REDISQL_TYPE_DATE {
+				t, err := time.Parse("2006-01-02 15:04:05", kv[1])
+				if err != nil {
+					return err
+				}
+				score = t.Format("20060102150405")
+			} else {
+				score = kv[1]
+			}
+			fmt.Printf("score = %s", score)
+			_, err := conn.Do("ZADD", fmt.Sprintf(REDISQL_INDEX_DATAS, database, tab.Name, kv[0]), score, ids[len(ids)-1])
+			if err != nil {
+				return err
+			}
 		}
 	}
 	return nil

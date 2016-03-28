@@ -87,6 +87,8 @@ type Select struct {
 	Where  SingleCondition
 	And    []SingleCondition
 	Or     []SingleCondition
+	Top    int
+	Limit  []int
 }
 
 func FROM(tables ...string) *Select {
@@ -142,6 +144,11 @@ func (slt *Select) FIELDS(fields ...string) *Select {
 	return &Select{
 		Froms:  slt.Froms,
 		Fields: tmpfields,
+		Where:  slt.Where,
+		And:    slt.And,
+		Or:     slt.Or,
+		Top:    slt.Top,
+		Limit:  slt.Limit,
 	}
 }
 
@@ -176,6 +183,45 @@ func (slt *Select) WHERE(condition string) *Select {
 		Froms:  slt.Froms,
 		Fields: slt.Fields,
 		Where:  temCondition,
+		And:    slt.And,
+		Or:     slt.Or,
+		Top:    slt.Top,
+		Limit:  slt.Limit,
+	}
+}
+
+func (slt *Select) TOP(top int) *Select {
+	return &Select{
+		Froms:  slt.Froms,
+		Fields: slt.Fields,
+		Where:  slt.Where,
+		And:    slt.And,
+		Or:     slt.Or,
+		Top:    top,
+		Limit:  slt.Limit,
+	}
+}
+
+func (slt *Select) LIMIT(start, end int) *Select {
+	if start < 0 {
+		panic("limit start can't less than 0.")
+	}
+	var limit []int
+	if start > end && end > 0 {
+		limit[0] = end
+		limit[1] = start
+	} else {
+		limit[0] = start
+		limit[1] = end
+	}
+	return &Select{
+		Froms:  slt.Froms,
+		Fields: slt.Fields,
+		Where:  slt.Where,
+		And:    slt.And,
+		Or:     slt.Or,
+		Top:    slt.Top,
+		Limit:  limit,
 	}
 }
 
@@ -285,4 +331,24 @@ func (slt *Select) SELECT() ([]byte, error) {
 	resstring += "}"
 
 	return []byte(resstring), nil
+}
+
+func inter(array1, array2 []string) []string {
+	var arrRes []string
+	for _, v1 := range array1 {
+		for _, v2 := range array2 {
+			if v1 == v2 {
+				arrRes = append(arrRes, v1)
+				continue
+			}
+		}
+	}
+	return arrRes
+}
+
+func union(array1, array2 []string) []string {
+	var arrRes []string
+	arrRes = append(arrRes, array1...)
+	arrRes = append(arrRes, array2...)
+	return arrRes
 }

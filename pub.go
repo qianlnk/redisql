@@ -122,6 +122,15 @@ func existsField(tablename, fieldname string) bool {
 	return exists
 }
 
+func getFieldType(tablename, fieldname string) (string, error) {
+	fmt.Printf("get field %s.%s's type start...\n", tablename, fieldname)
+
+	conn := getConn()
+	defer conn.Close()
+
+	return redigo.String(conn.Do("HGET", fmt.Sprintf(REDISQL_FIELDS, database, tablename), fieldname))
+}
+
 //index opertion
 func existsIndex(tablename, indexname string) bool {
 	fmt.Println("exists %s %s index %s start...", database, tablename, indexname)

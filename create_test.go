@@ -18,7 +18,7 @@ func TestCreate(*testing.T) {
 	Connect("127.0.0.1", "6379", "", "tcp", 5, 120)
 	Selectdb(0)
 	ChangeDatabase("lnkgift")
-	err := TABLE("log").FIELDS("userid", "operate", "detail", "data").TYPES("int", "string", "string, datatime").CREATE()
+	err := TABLE("student").FIELDS("sid", "name", "class", "age", "date").TYPES("number", "string", "string, number, date").CREATE()
 	fmt.Println(err)
 }
 
@@ -26,9 +26,10 @@ func TestIndex(*testing.T) {
 	Connect("127.0.0.1", "6379", "", "tcp", 5, 120)
 	Selectdb(0)
 	ChangeDatabase("lnkgift")
-	err := TABLE("log").FIELDS("userid").INDEX()
-	err = TABLE("log").FIELDS("operate").INDEX()
-	err = TABLE("log").FIELDS("detail").INDEX()
-	err = TABLE("log").FIELDS("data").INDEX()
+	//err := TABLE("student").FIELDS("sid").INDEX()
+	//err = TABLE("student").FIELDS("date").INDEX()
+	err := TABLE("student").FIELDS("age").INDEX()
+	err = TABLE("student").FIELDS("name").INDEX()
+	err = TABLE("student").FIELDS("class").INDEX()
 	fmt.Println(err)
 }
