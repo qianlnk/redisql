@@ -7,7 +7,6 @@ redisql
 * Count
 * Limit
 * Other Comming soon
-
 ##how to use
 ###connect to redis
 ```golang
