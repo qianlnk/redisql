@@ -1,12 +1,12 @@
 redisql
 ----
 #support Query
-        Exact Match Query
-        Range Query
-        Simple query conditions
-        Count
-        Limit
-        Other Comming soon
+* Exact Match Query
+* Range Query
+* Simple query conditions
+* Count
+* Limit
+* Other Comming soon
 ##how to use
 ###connect to redis
 ```golang
