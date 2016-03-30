@@ -27,7 +27,7 @@ detail VARCHAR(128)not null default '',
 //how to use
 //eg: FIELDS("a.name, a.age, a.city, b.userid, b.operate, b.detail, b.data")
 //	  .FROM("user, log").ALIAS("a, b")
-//	  .WHERE(a.id = b.userid).AND(a.age = 24).OR(b.operate = "login").SELECT()
+//	  .WHERE(a.id = b.userid AND a.age = 24) OR (b.operate = "login").SELECT()
 type Inner struct {
 	Inner string
 	Alias string
@@ -60,33 +60,15 @@ type SltField struct {
 	Alias      string
 }
 
-type SingleCondition struct {
-	TableAlias string
-	Field      string
-	Compare    string
-	Value      string
-}
-
 var (
-	CompareSign = [...]string{"=", "!=", ">", ">=", "<", "<="}
+	CompareSign = [...]string{"=", "!=", ">", ">=", "<", "<=", "like"}
+	Opertion    = [...]string{"(", ")", "and", "or"}
 )
-
-type ComplexCondition struct {
-	SgCdt []SingleCondition
-	Union string //or | and
-}
-
-type Condition struct {
-	CplCdt []ComplexCondition
-	Union  string
-}
 
 type Select struct {
 	Froms  SltTable   //query table must have an alias
 	Fields []SltField //query field must like tablealias.fieldname, it can have an alias also.
-	Where  SingleCondition
-	And    []SingleCondition
-	Or     []SingleCondition
+	Where  []string
 	Top    int
 	Limit  []int
 }
@@ -145,46 +127,23 @@ func (slt *Select) FIELDS(fields ...string) *Select {
 		Froms:  slt.Froms,
 		Fields: tmpfields,
 		Where:  slt.Where,
-		And:    slt.And,
-		Or:     slt.Or,
 		Top:    slt.Top,
 		Limit:  slt.Limit,
 	}
 }
 
 func (slt *Select) WHERE(condition string) *Select {
-	var temCondition SingleCondition
-	cdt := strings.Fields(condition)
-	if len(cdt) != 3 {
-		panic(errors.New(fmt.Sprintf("wrong condition: '%s'.", condition)))
+	specialChar := []string{"=", "!=", ">", ">=", "<", "<=", "(", ")", "and(", "or(", ")and", ")or"}
+	var temCondition []string
+	tmpcdt := strings.ToLower(condition)
+	for _, c := range specialChar {
+		tmpcdt = strings.Replace(tmpcdt, c, " "+c+" ", -1)
 	}
-	tabField := strings.Split(cdt[0], ".")
-	if len(tabField) != 2 {
-		panic(errors.New(fmt.Sprintf("wrong condition: '%s'.", condition)))
-	} else {
-		temCondition.TableAlias = tabField[0]
-		temCondition.Field = tabField[1]
-	}
-
-	for _, cp := range CompareSign {
-		if cdt[1] == cp {
-			temCondition.Compare = cdt[1]
-		}
-	}
-
-	if temCondition.Compare == "" {
-		panic(errors.New(fmt.Sprintf("wrong compare sign '%s'.", cdt[1])))
-	}
-
-	value := strings.Replace(cdt[2], "'", "", -1)
-	temCondition.Value = value
-
+	temCondition = strings.Fields(tmpcdt)
 	return &Select{
 		Froms:  slt.Froms,
 		Fields: slt.Fields,
 		Where:  temCondition,
-		And:    slt.And,
-		Or:     slt.Or,
 		Top:    slt.Top,
 		Limit:  slt.Limit,
 	}
@@ -195,8 +154,6 @@ func (slt *Select) TOP(top int) *Select {
 		Froms:  slt.Froms,
 		Fields: slt.Fields,
 		Where:  slt.Where,
-		And:    slt.And,
-		Or:     slt.Or,
 		Top:    top,
 		Limit:  slt.Limit,
 	}
@@ -218,8 +175,6 @@ func (slt *Select) LIMIT(start, end int) *Select {
 		Froms:  slt.Froms,
 		Fields: slt.Fields,
 		Where:  slt.Where,
-		And:    slt.And,
-		Or:     slt.Or,
 		Top:    slt.Top,
 		Limit:  limit,
 	}
@@ -248,20 +203,6 @@ func (slt *Select) check() error {
 		}
 	}
 
-	//check where
-	if slt.Where.Field != "" {
-		if tab, ok := slt.Froms[slt.Where.TableAlias]; ok {
-			if existsField(tab, slt.Where.Field) == false {
-				return errors.New(fmt.Sprintf("Unknow cloumn '%s.%s' int field list.", slt.Where.TableAlias, slt.Where.Field))
-			} else {
-				if existsIndex(tab, fmt.Sprintf("index_%s", slt.Where.Field)) == false {
-					return errors.New(fmt.Sprintf("not index for clumn '%s'.", slt.Where.Field))
-				}
-			}
-		} else {
-			return errors.New(fmt.Sprintf("Unknow alias '%s' int table list used in condition.", slt.Where.TableAlias))
-		}
-	}
 	return nil
 }
 
@@ -276,79 +217,67 @@ func (slt *Select) SELECT() ([]byte, error) {
 	conn := getConn()
 	defer conn.Close()
 
-	var ids []string
-	if slt.Where.Field == "" {
-		for _, v := range slt.Froms {
+	var ids map[string][]string
+	if len(slt.Where) == 0 {
+		for k, v := range slt.Froms {
 			tmpdatas, err := redigo.Strings(conn.Do("KEYS", fmt.Sprintf(REDISQL_DATAS, database, v, "*")))
 			if err != nil {
 				return nil, err
 			}
-			for _, v := range tmpdatas {
-				ids = append(ids, strings.Split(v, ".")[len(strings.Split(v, "."))-1])
+			for _, tmp := range tmpdatas {
+				ids[k] = append(ids[k], strings.Split(tmp, ".")[len(strings.Split(tmp, "."))-1])
 			}
 		}
-	} else if slt.And == nil && slt.Or == nil {
-		//get data id
-		indexData := fmt.Sprintf("%s.%s", slt.Where.Field, slt.Where.Value)
-		ids, err = redigo.Strings(conn.Do("SMEMBERS", fmt.Sprintf(REDISQL_INDEX_DATAS, database, slt.Froms[slt.Where.TableAlias], indexData)))
-		if err != nil {
-			return nil, err
-		}
+	} else {
+		//get ids
+		//esStack := new_stack()
+		//snStack := new_stack()
+		//snStack.PUSH("#")
 	}
 
-	var fields []interface{}
-	for _, f := range slt.Fields {
-		fields = append(fields, f.Name)
-	}
+	//	} else if slt.And == nil && slt.Or == nil {
+	//		//get data id
+	//		indexData := fmt.Sprintf("%s.%s", slt.Where.Field, slt.Where.Value)
+	//		ids, err = redigo.Strings(conn.Do("SMEMBERS", fmt.Sprintf(REDISQL_INDEX_DATAS, database, slt.Froms[slt.Where.TableAlias], indexData)))
+	//		if err != nil {
+	//			return nil, err
+	//		}
+	//	}
 
-	var datas [][]string
-	for _, id := range ids {
-		var params []interface{}
-		params = append(params, fmt.Sprintf(REDISQL_DATAS, database, slt.Froms[slt.Fields[0].TableAlias], id))
-		params = append(params, fields...)
-		//fmt.Println(params)
-		datas1, err := redigo.Strings(conn.Do("HMGET", params...))
-		if err != nil {
-			return nil, err
-		}
-		datas = append(datas, datas1)
-	}
-	var resstring string
-	resstring += "{"
-	for i, f := range slt.Fields {
-		if i > 0 {
-			resstring += ","
-		}
-		resstring += fmt.Sprintf("\"%s\":[", f.Alias)
-		for j, data := range datas {
-			if j > 0 {
-				resstring += ","
-			}
-			resstring += fmt.Sprintf("\"%s\"", data[i])
-		}
-		resstring += "]"
-	}
-	resstring += "}"
+	//	var fields []interface{}
+	//	for _, f := range slt.Fields {
+	//		fields = append(fields, f.Name)
+	//	}
 
-	return []byte(resstring), nil
-}
+	//	var datas [][]string
+	//	for _, id := range ids {
+	//		var params []interface{}
+	//		params = append(params, fmt.Sprintf(REDISQL_DATAS, database, slt.Froms[slt.Fields[0].TableAlias], id))
+	//		params = append(params, fields...)
+	//		//fmt.Println(params)
+	//		datas1, err := redigo.Strings(conn.Do("HMGET", params...))
+	//		if err != nil {
+	//			return nil, err
+	//		}
+	//		datas = append(datas, datas1)
+	//	}
+	//	var resstring string
+	//	resstring += "{"
+	//	for i, f := range slt.Fields {
+	//		if i > 0 {
+	//			resstring += ","
+	//		}
+	//		resstring += fmt.Sprintf("\"%s\":[", f.Alias)
+	//		for j, data := range datas {
+	//			if j > 0 {
+	//				resstring += ","
+	//			}
+	//			resstring += fmt.Sprintf("\"%s\"", data[i])
+	//		}
+	//		resstring += "]"
+	//	}
+	//	resstring += "}"
 
-func inter(array1, array2 []string) []string {
-	var arrRes []string
-	for _, v1 := range array1 {
-		for _, v2 := range array2 {
-			if v1 == v2 {
-				arrRes = append(arrRes, v1)
-				continue
-			}
-		}
-	}
-	return arrRes
-}
-
-func union(array1, array2 []string) []string {
-	var arrRes []string
-	arrRes = append(arrRes, array1...)
-	arrRes = append(arrRes, array2...)
-	return arrRes
+	//	return []byte(resstring), nil
+	return nil, nil
 }

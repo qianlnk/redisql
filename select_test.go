@@ -16,7 +16,7 @@ func TestSelect(*testing.T) {
 		City []string `json:"mycity"`
 	}
 	var testres test
-	res, err := FROM("user a").FIELDS("a.name myname, a.age myage, a.city mycity").WHERE("a.age = 24").SELECT()
+	res, err := FROM("user a").FIELDS("a.name myname, a.age myage, a.city mycity").WHERE("(a.age=24)and(a.name like '%qian%')").SELECT()
 	if err != nil {
 		fmt.Println(res, err)
 	}

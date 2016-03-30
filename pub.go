@@ -1,9 +1,17 @@
 package redisql
 
 import (
+	"container/list"
 	"fmt"
 	redigo "github.com/garyburd/redigo/redis"
 	"strings"
+)
+
+const (
+	GREATER = 1
+	EQUAL   = 2
+	LESS    = 3
+	ERROR   = -1
 )
 
 func getConn() redigo.Conn {
@@ -168,4 +176,133 @@ func getIndexs(tablename string) (map[string][]string, error) {
 	}
 
 	return indexs, nil
+}
+
+//return res when res int array1 and array2
+func inter(array1, array2 []string) []string {
+	var arrRes []string
+	for _, v1 := range array1 {
+		for _, v2 := range array2 {
+			if v1 == v2 {
+				arrRes = append(arrRes, v1)
+				continue
+			}
+		}
+	}
+	return arrRes
+}
+
+//return res when res in array1 or array2
+func union(array1, array2 []string) []string {
+	var arrRes []string
+	arrRes = append(arrRes, array1...)
+	arrRes = append(arrRes, array2...)
+	return arrRes
+}
+
+//return res when res in array1 but not in array2
+func outer(array1, array2 []string) []string {
+	var arrRes []string
+	for _, v1 := range array1 {
+		if inarray(array2, v1) == false {
+			arrRes = append(arrRes, v1)
+		}
+	}
+	return arrRes
+}
+
+//judge is sub in array
+func inarray(array []string, sub string) bool {
+	for _, v := range array {
+		if sub == v {
+			return true
+		}
+	}
+	return false
+}
+
+//create stack
+type stack struct {
+	s *list.List
+}
+
+func new_stack() *stack {
+	return &stack{
+		s: list.New(),
+	}
+}
+func (s *stack) PUSH(value string) {
+	s.s.PushBack(value)
+}
+
+func (s *stack) POP() string {
+	res := s.s.Back()
+	s.s.Remove(res)
+	return res.Value.(string)
+}
+
+func (s *stack) GetPOP() string {
+	res := s.s.Back()
+	return res.Value.(string)
+}
+
+//
+func Compare(oldsign, newsign string) int {
+	switch oldsign {
+	case "(":
+		switch newsign {
+		case "(":
+			return LESS
+		case ")":
+			return EQUAL
+		case "or":
+			return LESS
+		case "and":
+			return LESS
+		default:
+			return ERROR
+		}
+		break
+	case ")":
+		switch newsign {
+		case "or":
+			return GREATER
+		case "and":
+			return GREATER
+		default:
+			return ERROR
+		}
+		break
+	case "and":
+		switch newsign {
+		case "or":
+			return GREATER
+		case "and":
+			return GREATER
+		case "(":
+			return GREATER
+		case ")":
+			return GREATER
+		default:
+			return ERROR
+		}
+		break
+	case "or":
+		switch newsign {
+		case "or":
+			return GREATER
+		case "and":
+			return GREATER
+		case "(":
+			return GREATER
+		case ")":
+			return GREATER
+		default:
+			return ERROR
+		}
+		break
+	default:
+		return ERROR
+	}
+	return ERROR
 }
