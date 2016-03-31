@@ -61,8 +61,8 @@ type SltField struct {
 }
 
 var (
-	CompareSign = [...]string{"=", "!=", ">", ">=", "<", "<=", "like"}
-	Opertion    = [...]string{"(", ")", "and", "or"}
+	CompareSign = []string{"=", "!=", ">", ">=", "<", "<=", "like"}
+	Opertion    = []string{"(", ")", "and", "or"}
 )
 
 type Select struct {
@@ -133,6 +133,7 @@ func (slt *Select) FIELDS(fields ...string) *Select {
 }
 
 func (slt *Select) WHERE(condition string) *Select {
+	//data value can't include data as follow
 	specialChar := []string{"=", "!=", ">", ">=", "<", "<=", "(", ")", "and(", "or(", ")and", ")or"}
 	var temCondition []string
 	tmpcdt := strings.ToLower(condition)
@@ -230,9 +231,29 @@ func (slt *Select) SELECT() ([]byte, error) {
 		}
 	} else {
 		//get ids
-		//esStack := new_stack()
-		//snStack := new_stack()
-		//snStack.PUSH("#")
+		esStack := new_stack()
+		snStack := new_stack()
+		snStack.PUSH("#")
+		for _, val := range slt.Where {
+			if inarray(Opertion, val) == false && inarray(CompareSign, val) == false {
+				if inarray(CompareSign, snStack.GetPOP()) == false {
+					esStack.PUSH(val)
+				} else {
+					left := esStack.POP()
+					opt := snStack.POP()
+					right := val
+					tmpids, err := slt.getDataIds(left, opt, right)
+					if err != nil {
+						return nil, err
+					}
+					var idstring string
+					for _, v := range tmpids {
+						idstring = idstring + " " + v
+					}
+					esStack.PUSH(idstring)
+				}
+			}
+		}
 	}
 
 	//	} else if slt.And == nil && slt.Or == nil {
@@ -279,5 +300,35 @@ func (slt *Select) SELECT() ([]byte, error) {
 	//	resstring += "}"
 
 	//	return []byte(resstring), nil
+	return nil, nil
+}
+
+func (slt *Select) getDataIds(left, option, right string) ([]string, error) {
+	conn := getConn()
+	defer conn.Close()
+	fields := strings.Split(left, ".")
+	if existsTable(slt.Froms[fields[0]]) == false {
+		return nil, errors.New(fmt.Sprintf("table %s not exist.", slt.Froms[fields[0]]))
+	}
+	if existsField(slt.Froms[fields[0]], fields[1]) == false {
+		return nil, errors.New(fmt.Sprintf("field %s not found in table %s.", fields[1], slt.Froms[fields[0]]))
+	}
+	fieldtype, err := getFieldType(slt.Froms[fields[0]], fields[1])
+	if err != nil {
+		return nil, err
+	}
+	if fieldtype == REDISQL_TYPE_STRING {
+		switch option {
+		case "=":
+			indexdata := fmt.Sprintf("%s.%s", fields[1], right)
+			ids, err := redigo.Strings(conn.Do("SMEMBERS", fmt.Sprintf(REDISQL_INDEX_DATAS, database, slt.Froms[fields[0]], indexdata)))
+			if err != nil {
+				return nil, err
+			}
+			return ids, nil
+		}
+	} else {
+		return nil, nil
+	}
 	return nil, nil
 }
