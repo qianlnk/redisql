@@ -7,13 +7,6 @@ import (
 	"strings"
 )
 
-const (
-	GREATER = 1
-	EQUAL   = 2
-	LESS    = 3
-	ERROR   = -1
-)
-
 func getConn() redigo.Conn {
 	conn := DB.pool.Get()
 	conn.Do("SELECT", redisdb)
@@ -249,60 +242,79 @@ func (s *stack) GetPOP() string {
 //
 func Compare(oldsign, newsign string) int {
 	switch oldsign {
+	case "#":
+		switch newsign {
+		case "(":
+			return REDISQL_PRIORITY_LESS
+		case "and":
+			return REDISQL_PRIORITY_LESS
+		case "or":
+			return REDISQL_PRIORITY_LESS
+		case "#":
+			return REDISQL_PRIORITY_GREATER
+		default:
+			return REDISQL_PRIORITY_ERROR
+		}
 	case "(":
 		switch newsign {
 		case "(":
-			return LESS
+			return REDISQL_PRIORITY_LESS
 		case ")":
-			return EQUAL
+			return REDISQL_PRIORITY_EQUAL
 		case "or":
-			return LESS
+			return REDISQL_PRIORITY_LESS
 		case "and":
-			return LESS
+			return REDISQL_PRIORITY_LESS
+		case "#":
+			return REDISQL_PRIORITY_LESS
 		default:
-			return ERROR
+			return REDISQL_PRIORITY_ERROR
 		}
 		break
 	case ")":
 		switch newsign {
 		case "or":
-			return GREATER
+			return REDISQL_PRIORITY_GREATER
 		case "and":
-			return GREATER
+			return REDISQL_PRIORITY_GREATER
 		default:
-			return ERROR
+			return REDISQL_PRIORITY_ERROR
 		}
 		break
 	case "and":
 		switch newsign {
 		case "or":
-			return GREATER
+			return REDISQL_PRIORITY_GREATER
 		case "and":
-			return GREATER
+			return REDISQL_PRIORITY_GREATER
 		case "(":
-			return GREATER
+			return REDISQL_PRIORITY_LESS
 		case ")":
-			return GREATER
+			return REDISQL_PRIORITY_GREATER
+		case "#":
+			return REDISQL_PRIORITY_GREATER
 		default:
-			return ERROR
+			return REDISQL_PRIORITY_ERROR
 		}
 		break
 	case "or":
 		switch newsign {
 		case "or":
-			return GREATER
+			return REDISQL_PRIORITY_GREATER
 		case "and":
-			return GREATER
+			return REDISQL_PRIORITY_GREATER
 		case "(":
-			return GREATER
+			return REDISQL_PRIORITY_LESS
 		case ")":
-			return GREATER
+			return REDISQL_PRIORITY_GREATER
+		case "#":
+			return REDISQL_PRIORITY_GREATER
 		default:
-			return ERROR
+			return REDISQL_PRIORITY_ERROR
 		}
 		break
 	default:
-		return ERROR
+		return REDISQL_PRIORITY_ERROR
 	}
-	return ERROR
+	return REDISQL_PRIORITY_ERROR
 }

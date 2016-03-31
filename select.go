@@ -4,7 +4,9 @@ import (
 	"errors"
 	"fmt"
 	redigo "github.com/garyburd/redigo/redis"
+	"strconv"
 	"strings"
+	"time"
 )
 
 /*
@@ -62,7 +64,7 @@ type SltField struct {
 
 var (
 	CompareSign = []string{"=", "!=", ">", ">=", "<", "<=", "like"}
-	Opertion    = []string{"(", ")", "and", "or"}
+	Opertion    = []string{"(", ")", "and", "or", "#"}
 )
 
 type Select struct {
@@ -134,11 +136,19 @@ func (slt *Select) FIELDS(fields ...string) *Select {
 
 func (slt *Select) WHERE(condition string) *Select {
 	//data value can't include data as follow
-	specialChar := []string{"=", "!=", ">", ">=", "<", "<=", "(", ")", "and(", "or(", ")and", ")or"}
+	specialChar1 := []string{"!=", ">=", "<="}
+	specialChar2 := []string{"=", ">", "<", "(", ")"}
+	specialChar3 := []string{"! =", ">  =", "<  ="}
 	var temCondition []string
 	tmpcdt := strings.ToLower(condition)
-	for _, c := range specialChar {
+	for _, c := range specialChar1 {
 		tmpcdt = strings.Replace(tmpcdt, c, " "+c+" ", -1)
+	}
+	for _, c := range specialChar2 {
+		tmpcdt = strings.Replace(tmpcdt, c, " "+c+" ", -1)
+	}
+	for i, c := range specialChar3 {
+		tmpcdt = strings.Replace(tmpcdt, c, specialChar1[i], -1)
 	}
 	temCondition = strings.Fields(tmpcdt)
 	return &Select{
@@ -234,7 +244,9 @@ func (slt *Select) SELECT() ([]byte, error) {
 		esStack := new_stack()
 		snStack := new_stack()
 		snStack.PUSH("#")
-		for _, val := range slt.Where {
+		tmpWhere := append(slt.Where, "#")
+		for _, val := range tmpWhere {
+			fmt.Println(val)
 			if inarray(Opertion, val) == false && inarray(CompareSign, val) == false {
 				if inarray(CompareSign, snStack.GetPOP()) == false {
 					esStack.PUSH(val)
@@ -242,15 +254,44 @@ func (slt *Select) SELECT() ([]byte, error) {
 					left := esStack.POP()
 					opt := snStack.POP()
 					right := val
-					tmpids, err := slt.getDataIds(left, opt, right)
+					ok, err := slt.judgeRight(left, right)
 					if err != nil {
 						return nil, err
 					}
-					var idstring string
-					for _, v := range tmpids {
-						idstring = idstring + " " + v
+					if ok {
+						alias, tmpids, err := slt.getDataIds(left, opt, right)
+						if err != nil {
+							return nil, err
+						}
+						var idstring string
+						idstring = alias
+						for _, v := range tmpids {
+							idstring = idstring + " " + v
+						}
+						fmt.Println(idstring)
+						esStack.PUSH(idstring)
+					} else {
+						tmpEs := left + " " + opt + " " + right
+						esStack.PUSH(tmpEs)
 					}
-					esStack.PUSH(idstring)
+				}
+			} else if inarray(CompareSign, val) == true {
+				snStack.PUSH(val)
+			} else if inarray(Opertion, val) == true {
+				res := Compare(snStack.GetPOP(), val)
+				fmt.Println(snStack.GetPOP(), val, "res=", res)
+				switch res {
+				case REDISQL_PRIORITY_LESS:
+					snStack.PUSH(val)
+					break
+				case REDISQL_PRIORITY_EQUAL:
+					snStack.POP()
+					break
+				case REDISQL_PRIORITY_GREATER:
+					right := esStack.POP()
+					left := esStack.POP()
+					opt := snStack.POP()
+					fmt.Printf("%s %s %s", left, opt, right)
 				}
 			}
 		}
@@ -303,32 +344,155 @@ func (slt *Select) SELECT() ([]byte, error) {
 	return nil, nil
 }
 
-func (slt *Select) getDataIds(left, option, right string) ([]string, error) {
+func (slt *Select) getDataIds(left, option, right string) (string, []string, error) {
 	conn := getConn()
 	defer conn.Close()
 	fields := strings.Split(left, ".")
+	if len(fields) != 2 {
+		return "", nil, errors.New(fmt.Sprintf("unknow field '%s'.", left))
+	}
 	if existsTable(slt.Froms[fields[0]]) == false {
-		return nil, errors.New(fmt.Sprintf("table %s not exist.", slt.Froms[fields[0]]))
+		return "", nil, errors.New(fmt.Sprintf("table %s not exist.", slt.Froms[fields[0]]))
 	}
 	if existsField(slt.Froms[fields[0]], fields[1]) == false {
-		return nil, errors.New(fmt.Sprintf("field %s not found in table %s.", fields[1], slt.Froms[fields[0]]))
+		return "", nil, errors.New(fmt.Sprintf("field %s not found in table %s.", fields[1], slt.Froms[fields[0]]))
 	}
 	fieldtype, err := getFieldType(slt.Froms[fields[0]], fields[1])
 	if err != nil {
-		return nil, err
+		return "", nil, err
 	}
 	if fieldtype == REDISQL_TYPE_STRING {
+		tmpRight := strings.Replace(right, "'", "", -1)
 		switch option {
 		case "=":
-			indexdata := fmt.Sprintf("%s.%s", fields[1], right)
-			ids, err := redigo.Strings(conn.Do("SMEMBERS", fmt.Sprintf(REDISQL_INDEX_DATAS, database, slt.Froms[fields[0]], indexdata)))
+			index := fmt.Sprintf("%s.%s", fields[1], tmpRight)
+			key := fmt.Sprintf(REDISQL_INDEX_DATAS, database, slt.Froms[fields[0]], index)
+			res, err := redigo.Strings(conn.Do("SMEMBERS", key))
+			return fields[0], res, err
+		case "!=":
+			index := fmt.Sprintf("%s.%s", fields[1], tmpRight)
+			key := fmt.Sprintf(REDISQL_INDEX_DATAS, database, slt.Froms[fields[0]], index)
+			outids, err := redigo.Strings(conn.Do("SMEMBERS", key))
 			if err != nil {
-				return nil, err
+				return "", nil, err
 			}
-			return ids, nil
+			tmpkeys, err := redigo.Strings(conn.Do("KEYS", fmt.Sprintf(REDISQL_DATAS, database, slt.Froms[fields[0]], "*")))
+			if err != nil {
+				return "", nil, err
+			}
+			var ids []string
+			for _, tmp := range tmpkeys {
+				ids = append(ids, strings.Split(tmp, ".")[len(strings.Split(tmp, "."))-1])
+			}
+			return fields[0], outer(ids, outids), nil
+		case "like":
+			index := fmt.Sprintf("%s.%s", fields[1], strings.Replace(tmpRight, "%", "*", -1))
+			key := fmt.Sprintf(REDISQL_INDEX_DATAS, database, slt.Froms[fields[0]], index)
+			fmt.Println(fmt.Sprintf(REDISQL_INDEX_DATAS, database, slt.Froms[fields[0]], fmt.Sprintf("%s.%s", fields[1], strings.Replace(strings.Replace(right, "'", "", -1), "%", "*", -1))))
+			tmpkeys, err := redigo.Strings(conn.Do("KEYS", key))
+			if err != nil {
+				return "", nil, err
+			}
+			var ids []string
+			for _, tmp := range tmpkeys {
+				tmpids, err := redigo.Strings(conn.Do("SMEMBERS", tmp))
+				if err != nil {
+					return "", nil, err
+				}
+				ids = append(ids, tmpids...)
+			}
+			return fields[0], ids, nil
+		default:
+			return "", nil, errors.New("type string not support sign " + option)
 		}
 	} else {
-		return nil, nil
+		var score string
+		if fieldtype == REDISQL_TYPE_NUMBER {
+			_, err = strconv.Atoi(right)
+			if err != nil {
+				return "", nil, err
+			}
+			score = right
+		} else {
+			tmpRight := strings.Replace(right, "'", "", -1)
+			t, err := time.Parse("2006-01-02 15:04:05", tmpRight)
+			if err != nil {
+				return "", nil, err
+			}
+			score = t.Format("20060102150405")
+		}
+		fmt.Printf("score:%s\n", score)
+		key := fmt.Sprintf(REDISQL_INDEX_DATAS, database, slt.Froms[fields[0]], fields[1])
+		switch option {
+		case "=":
+			res, err := redigo.Strings(conn.Do("ZRANGEBYSCORE", key, score, score))
+			return fields[0], res, err
+		case "!=":
+			ids1, err := redigo.Strings(conn.Do("ZRANGEBYSCORE", key, "-inf", "("+score))
+			if err != nil {
+				return "", nil, err
+			}
+			ids2, err := redigo.Strings(conn.Do("ZRANGEBYSCORE", key, "("+score, "+inf"))
+			if err != nil {
+				return "", nil, err
+			}
+			return fields[0], union(ids1, ids2), nil
+		case ">":
+			res, err := redigo.Strings(conn.Do("ZRANGEBYSCORE", key, "("+score, "+inf"))
+			return fields[0], res, err
+		case ">=":
+			res, err := redigo.Strings(conn.Do("ZRANGEBYSCORE", key, score, "+inf"))
+			return fields[0], res, err
+		case "<":
+			res, err := redigo.Strings(conn.Do("ZRANGEBYSCORE", key, "-inf", "("+score))
+			return fields[0], res, err
+		case "<=":
+			res, err := redigo.Strings(conn.Do("ZRANGEBYSCORE", key, "-inf", score))
+			return fields[0], res, err
+		default:
+			return "", nil, errors.New("type number or date not support sign " + option)
+		}
 	}
-	return nil, nil
+	return "", nil, nil
+}
+
+//return true when right is value, return false where right is a table field.
+func (slt *Select) judgeRight(left, right string) (bool, error) {
+	if strings.Contains(right, "'") == true { //string or time, include "'" must be value
+		return true, nil
+	} else {
+		tmp := strings.Split(left, ".")
+		if len(tmp) != 2 {
+			return false, errors.New(fmt.Sprintf("unknow field '%s'.", left))
+		}
+		fieldtype, err := getFieldType(slt.Froms[tmp[0]], tmp[1])
+		if err != nil {
+			return false, err
+		}
+		if fieldtype == "" {
+			return false, errors.New(fmt.Sprintf("field %s not found in table %s.", tmp[1], slt.Froms[tmp[0]]))
+		}
+		if fieldtype == REDISQL_TYPE_NUMBER {
+			_, err := strconv.Atoi(right)
+			if err != nil {
+				return false, err
+			} else {
+				return true, nil
+			}
+		} else {
+			rights := strings.Split(right, ".")
+			if len(rights) != 2 {
+				return false, errors.New(fmt.Sprintf("unknow field '%s'.", right))
+			} else {
+				if existsTable(slt.Froms[rights[0]]) == false {
+					return false, errors.New(fmt.Sprintf("table %s not exist.", slt.Froms[rights[0]]))
+				}
+				if existsField(slt.Froms[rights[0]], rights[1]) == false {
+					return false, errors.New(fmt.Sprintf("field %s not found in table %s.", rights[1], slt.Froms[rights[0]]))
+				}
+				return false, nil
+			}
+		}
+	}
+	return false, errors.New("unknow, no more message.")
 }

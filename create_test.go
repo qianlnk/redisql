@@ -18,7 +18,9 @@ func TestCreate(*testing.T) {
 	Connect("127.0.0.1", "6379", "", "tcp", 5, 120)
 	Selectdb(0)
 	ChangeDatabase("lnkgift")
-	err := TABLE("student").FIELDS("sid", "name", "class", "age", "date").TYPES("number", "string", "string, number, date").CREATE()
+	err := TABLE("student").FIELDS("xuehao", "name", "class", "age", "date").TYPES("number", "string", "string, number, date").CREATE()
+	fmt.Println(err)
+	err = TABLE("score").FIELDS("sid", "math", "english", "chinese").TYPES("number", "number", "number, number").CREATE()
 	fmt.Println(err)
 }
 
@@ -26,10 +28,14 @@ func TestIndex(*testing.T) {
 	Connect("127.0.0.1", "6379", "", "tcp", 5, 120)
 	Selectdb(0)
 	ChangeDatabase("lnkgift")
-	//err := TABLE("student").FIELDS("sid").INDEX()
-	//err = TABLE("student").FIELDS("date").INDEX()
-	err := TABLE("student").FIELDS("age").INDEX()
+	err := TABLE("student").FIELDS("xuehao").INDEX()
 	err = TABLE("student").FIELDS("name").INDEX()
 	err = TABLE("student").FIELDS("class").INDEX()
+	err = TABLE("student").FIELDS("age").INDEX()
+	err = TABLE("student").FIELDS("date").INDEX()
+	err = TABLE("score").FIELDS("sid").INDEX()
+	err = TABLE("score").FIELDS("math").INDEX()
+	err = TABLE("score").FIELDS("english").INDEX()
+	err = TABLE("score").FIELDS("chinese").INDEX()
 	fmt.Println(err)
 }

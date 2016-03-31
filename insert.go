@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 )
 
 //how to use?
@@ -138,10 +139,36 @@ func (ist *Insert) INSERT() error {
 				}
 			}
 		}
-		_, err = conn.Do("SADD", fmt.Sprintf(REDISQL_INDEX_DATAS, database, ist.Into, indexdata), tmpid)
-		if err != nil {
-			conn.Do("DISCARD")
-			return err
+		var fieldtype string
+		if len(v) == 1 {
+			fieldtype, err = getFieldType(ist.Into, v[0])
+			if err != nil {
+				return err
+			}
+		}
+		if fieldtype == "" || fieldtype == REDISQL_TYPE_STRING {
+			_, err = conn.Do("SADD", fmt.Sprintf(REDISQL_INDEX_DATAS, database, ist.Into, indexdata), tmpid)
+			if err != nil {
+				conn.Do("DISCARD")
+				return err
+			}
+		} else {
+			kv := strings.Split(indexdata, ".")
+			var score string
+			if fieldtype == REDISQL_TYPE_DATE {
+				t, err := time.Parse("2006-01-02 15:04:05", kv[1])
+				if err != nil {
+					return err
+				}
+				score = t.Format("20060102150405")
+			} else {
+				score = kv[1]
+			}
+			fmt.Printf("score = %s", score)
+			_, err := conn.Do("ZADD", fmt.Sprintf(REDISQL_INDEX_DATAS, database, ist.Into, kv[0]), score, tmpid)
+			if err != nil {
+				return err
+			}
 		}
 	}
 

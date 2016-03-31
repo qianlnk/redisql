@@ -17,6 +17,14 @@ const (
 	REDISQL_TYPE_DATE   = "date"
 )
 
+//
+const (
+	REDISQL_PRIORITY_GREATER = 1
+	REDISQL_PRIORITY_EQUAL   = 0
+	REDISQL_PRIORITY_LESS    = -1
+	REDISQL_PRIORITY_ERROR   = -2
+)
+
 //redis store key design
 const (
 	REDISQL_DATABASES   = "databases"       //hset databases lnkgift 1
