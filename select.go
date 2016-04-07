@@ -270,7 +270,10 @@ func (slt *Select) SELECT() ([]byte, error) {
 						}
 						fmt.Println(idstring)
 						esStack.PUSH(idstring)
-					} else {
+					} else { //store incidence relation, opt must be '='
+						if opt != "=" {
+							return nil, errors.New(fmt.Sprintf("incidence relation %s %s %s not support, option must be '='.", left, opt, right))
+						}
 						tmpEs := left + " " + opt + " " + right
 						esStack.PUSH(tmpEs)
 					}
@@ -289,6 +292,7 @@ func (slt *Select) SELECT() ([]byte, error) {
 					break
 				case REDISQL_PRIORITY_GREATER:
 					right := esStack.POP()
+					fmt.Printf("right:%s", right)
 					left := esStack.POP()
 					opt := snStack.POP()
 					fmt.Printf("%s %s %s", left, opt, right)
@@ -341,6 +345,10 @@ func (slt *Select) SELECT() ([]byte, error) {
 	//	resstring += "}"
 
 	//	return []byte(resstring), nil
+	return nil, nil
+}
+
+func (slt *Select) getEsDataIds(expression string) (map[string][]string, error) {
 	return nil, nil
 }
 
@@ -472,14 +480,8 @@ func (slt *Select) judgeRight(left, right string) (bool, error) {
 		if fieldtype == "" {
 			return false, errors.New(fmt.Sprintf("field %s not found in table %s.", tmp[1], slt.Froms[tmp[0]]))
 		}
-		if fieldtype == REDISQL_TYPE_NUMBER {
-			_, err := strconv.Atoi(right)
-			if err != nil {
-				return false, err
-			} else {
-				return true, nil
-			}
-		} else {
+
+		if strings.Contains(right, ".") == true {
 			rights := strings.Split(right, ".")
 			if len(rights) != 2 {
 				return false, errors.New(fmt.Sprintf("unknow field '%s'.", right))
@@ -492,6 +494,8 @@ func (slt *Select) judgeRight(left, right string) (bool, error) {
 				}
 				return false, nil
 			}
+		} else {
+			return true, nil
 		}
 	}
 	return false, errors.New("unknow, no more message.")
