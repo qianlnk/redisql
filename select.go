@@ -245,7 +245,12 @@ func (slt *Select) SELECT() ([]byte, error) {
 		snStack := new_stack()
 		snStack.PUSH("#")
 		tmpWhere := append(slt.Where, "#")
-		for _, val := range tmpWhere {
+		i := 0
+		val := tmpWhere[i]
+		for {
+			if val == "#" && snStack.GetPOP() == "#" {
+				break
+			}
 			fmt.Println(val)
 			if inarray(Opertion, val) == false && inarray(CompareSign, val) == false {
 				if inarray(CompareSign, snStack.GetPOP()) == false {
@@ -275,29 +280,42 @@ func (slt *Select) SELECT() ([]byte, error) {
 							return nil, errors.New(fmt.Sprintf("incidence relation %s %s %s not support, option must be '='.", left, opt, right))
 						}
 						tmpEs := left + " " + opt + " " + right
-						esStack.PUSH(tmpEs)
+						res, err := slt.getEsDataIds(tmpEs)
+						if err != nil {
+							return nil, err
+						}
+						fmt.Printf(res)
+						esStack.PUSH(res)
 					}
 				}
+				i++
 			} else if inarray(CompareSign, val) == true {
 				snStack.PUSH(val)
+				i++
 			} else if inarray(Opertion, val) == true {
 				res := Compare(snStack.GetPOP(), val)
 				fmt.Println(snStack.GetPOP(), val, "res=", res)
 				switch res {
 				case REDISQL_PRIORITY_LESS:
 					snStack.PUSH(val)
+					i++
 					break
 				case REDISQL_PRIORITY_EQUAL:
 					snStack.POP()
+					i++
 					break
 				case REDISQL_PRIORITY_GREATER:
 					right := esStack.POP()
-					fmt.Printf("right:%s", right)
+					fmt.Printf("right:%s\n", right)
 					left := esStack.POP()
 					opt := snStack.POP()
-					fmt.Printf("%s %s %s", left, opt, right)
+					fmt.Printf("%s %s %s\n", left, opt, right)
+					res := merge(left, opt, right)
+					fmt.Printf("res:%s\n", res)
+					esStack.PUSH(res)
 				}
 			}
+			val = tmpWhere[i]
 		}
 	}
 
@@ -348,8 +366,140 @@ func (slt *Select) SELECT() ([]byte, error) {
 	return nil, nil
 }
 
-func (slt *Select) getEsDataIds(expression string) (map[string][]string, error) {
-	return nil, nil
+func (slt *Select) getEsDataIds(expression string) (string, error) {
+	fmt.Printf("getEsDataIds start, expression = %s\n", expression)
+	conn := getConn()
+	defer conn.Close()
+	es := strings.Split(expression, " ")
+	left := strings.Split(es[0], ".")
+	if len(left) != 2 {
+		return "", errors.New(fmt.Sprintf("unknow field '%s'.", es[0]))
+	}
+	if existsTable(slt.Froms[left[0]]) == false {
+		return "", errors.New(fmt.Sprintf("table %s not exist.", slt.Froms[left[0]]))
+	}
+	if existsField(slt.Froms[left[0]], left[1]) == false {
+		return "", errors.New(fmt.Sprintf("field %s not found in table %s.", left[1], slt.Froms[left[0]]))
+	}
+	lefttype, err := getFieldType(slt.Froms[left[0]], left[1])
+	if err != nil {
+		return "", err
+	}
+	right := strings.Split(es[2], ".")
+	if len(right) != 2 {
+		return "", errors.New(fmt.Sprintf("unknow field '%s'.", es[2]))
+	}
+	if existsTable(slt.Froms[right[0]]) == false {
+		return "", errors.New(fmt.Sprintf("table %s not exist.", slt.Froms[right[0]]))
+	}
+	if existsField(slt.Froms[right[0]], right[1]) == false {
+		return "", errors.New(fmt.Sprintf("field %s not found in table %s.", right[1], slt.Froms[right[0]]))
+	}
+	righttype, err := getFieldType(slt.Froms[right[0]], right[1])
+	if err != nil {
+		return "", err
+	}
+	if lefttype != righttype {
+		return "", errors.New(fmt.Sprintf("can not use type '%s' = '%s'.", lefttype, righttype))
+	}
+	fmt.Println(lefttype, righttype)
+	var res string
+	switch lefttype {
+	case REDISQL_TYPE_NUMBER:
+		if left[1] == "id" {
+			key := fmt.Sprintf(REDISQL_INDEX_DATAS, database, slt.Froms[right[0]], right[1])
+			fmt.Println("key:", key)
+			tmpids, err := redigo.Strings(conn.Do("ZRANGE", key, 0, -1, "withscores"))
+			if err != nil {
+				fmt.Println("err:", err)
+				return "", err
+			}
+			for i := 1; i < len(tmpids); i = i + 2 {
+				if i != 1 {
+					res += "^"
+				}
+				res = res + left[0] + " " + tmpids[i] + "&" + right[0] + " " + tmpids[i-1]
+			}
+			fmt.Println(res)
+		} else if right[1] == "id" {
+			key := fmt.Sprintf(REDISQL_INDEX_DATAS, database, slt.Froms[left[0]], left[1])
+			tmpids, err := redigo.Strings(conn.Do("ZRANGE", key, 0, -1, "withsocres"))
+			if err != nil {
+				return "", err
+			}
+			for i := 1; i < len(tmpids); i = i + 2 {
+				if i != 1 {
+					res += "^"
+				}
+				res = res + right[0] + " " + tmpids[i] + "&" + left[0] + " " + tmpids[i-1]
+			}
+		} else {
+			leftkey := fmt.Sprintf(REDISQL_INDEX_DATAS, database, slt.Froms[left[0]], left[1])
+			leftids, err := redigo.Strings(conn.Do("ZRANGE", leftkey, 0, -1, "withsocres"))
+			if err != nil {
+				return "", err
+			}
+			for i := 1; i < len(leftids); i = i + 2 {
+				rightkey := fmt.Sprintf(REDISQL_INDEX_DATAS, database, slt.Froms[right[0]], right[1])
+				rightids, err := redigo.Strings(conn.Do("ZRANGEBYSCORE", rightkey, leftids[i-1], leftids[i-1]))
+				if err != nil {
+					return "", err
+				}
+				tmprightids := right[0]
+				for _, id := range rightids {
+					tmprightids = tmprightids + " " + id
+				}
+				if len(tmprightids) == 0 {
+					continue
+				}
+				if i != 1 {
+					res += "^"
+				}
+				res = res + left[0] + " " + leftids[i] + "&" + tmprightids
+			}
+		}
+		break
+	case REDISQL_TYPE_STRING:
+		leftkey := fmt.Sprintf(REDISQL_INDEX_DATAS, database, slt.Froms[left[0]], left[1]+".*")
+		tmpkeys, err := redigo.Strings(conn.Do("KEYS", leftkey))
+		if err != nil {
+			return "", err
+		}
+		for i, k := range tmpkeys {
+			leftids, err := redigo.Strings(conn.Do("SMEMBERS", k))
+			if err != nil {
+				return "", err
+			}
+			values := strings.Split(k, ".")
+			value := values[len(values)-1]
+			rightkey := fmt.Sprintf(REDISQL_INDEX_DATAS, database, slt.Froms[right[0]], right[1]+"."+value)
+			rightids, err := redigo.Strings(conn.Do("SMEMBERS", rightkey))
+			if err != nil {
+				return "", err
+			}
+			if len(rightids) == 0 {
+				continue
+			}
+			if i != 1 {
+				res += "^"
+			}
+
+			res = res + left[0]
+			for _, v := range leftids {
+				res = res + " " + v
+			}
+			res = res + "&" + right[0]
+			for _, v := range rightids {
+				res = res + " " + v
+			}
+		}
+		break
+	case REDISQL_TYPE_DATE:
+		break
+	default:
+		return "", errors.New("data type err.")
+	}
+	return res, nil
 }
 
 func (slt *Select) getDataIds(left, option, right string) (string, []string, error) {
@@ -499,4 +649,19 @@ func (slt *Select) judgeRight(left, right string) (bool, error) {
 		}
 	}
 	return false, errors.New("unknow, no more message.")
+}
+
+func merge(left, opt, right string) string {
+	if strings.Contains(left, "&") == false {
+		if opt == "and" {
+			return left + "&" + right
+		} else if opt == "or" {
+			lefttab := strings.Fields(left)
+			righttab := strings.Fields(right)
+			return left + "&" + righttab[0] + " *^" + lefttab[0] + " * &" + right
+		}
+	} else {
+
+	}
+	return ""
 }

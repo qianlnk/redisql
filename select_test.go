@@ -16,7 +16,7 @@ func TestSelect(*testing.T) {
 		City []string `json:"mycity"`
 	}
 	var testres test
-	res, err := FROM("student a, score b").FIELDS("a.name myname, a.age myage, b.math, b.english, b.chinese").WHERE("a.xuehao = b.sid and (a.age>=22)and(b.english >80)").SELECT()
+	res, err := FROM("student a, score b").FIELDS("a.name myname, a.age myage, b.math, b.english, b.chinese").WHERE("a.id = b.sid and ((a.age>=22)or(b.english >80))").SELECT()
 	if err != nil {
 		fmt.Println(res, err)
 	}

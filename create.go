@@ -116,7 +116,13 @@ func (tab *Table) CREATE() error {
 	//add table info
 	var params []interface{}
 	params = append(params, fmt.Sprintf(REDISQL_FIELDS, database, tab.Name))
+	//add field 'id' default.
+	params = append(params, "id")
+	params = append(params, REDISQL_TYPE_NUMBER)
 	for i := 0; i < len(tab.Fields); i++ {
+		if tab.Fields[i] == "id" {
+			continue
+		}
 		params = append(params, tab.Fields[i])
 		params = append(params, tab.Types[i])
 	}
@@ -152,6 +158,11 @@ func (tab *Table) CREATE() error {
 	_, err = conn.Do("EXEC")
 	if err != nil {
 		conn.Do("DISCARD")
+		return err
+	}
+	//default create index on id
+	err = TABLE(tab.Name).FIELDS("id").INDEX()
+	if err != nil {
 		return err
 	}
 	return nil

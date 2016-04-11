@@ -21,9 +21,8 @@ func TestInsert(*testing.T) {
 	err = INTO("score").FIELDS("sid", "math", "english", "chinese").VALUES(4, 70, 85, 88).INSERT()
 	err = INTO("score").FIELDS("sid", "math", "english", "chinese").VALUES(5, 68, 90, 88).INSERT()
 	err = INTO("score").FIELDS("sid", "math", "english", "chinese").VALUES(6, 95, 83, 93).INSERT()
-
-	//err := INTO("student").FIELDS("xuehao", "name", "class", "age", "date").VALUES(3100301217, "wenqicheng", "jisuanji1002", 22, "2016-03-23 04:01:00").INSERT()
-	//err = INTO("score").FIELDS("sid", "math", "english", "chinese").VALUES(1, 98, 73, 89).INSERT()
+	err = INTO("student").FIELDS("xuehao", "name", "class", "age", "date").VALUES(3100301217, "wenqicheng", "jisuanji1002", 22, "2016-03-23 04:01:00").INSERT()
+	err = INTO("score").FIELDS("sid", "math", "english", "chinese").VALUES(7, 98, 73, 89).INSERT()
 	fmt.Println(err)
 }
 

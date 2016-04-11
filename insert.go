@@ -82,6 +82,8 @@ func (ist *Insert) INSERT() error {
 	//get data Info
 	var params []interface{}
 	params = append(params, fmt.Sprintf(REDISQL_DATAS, database, ist.Into, strconv.Itoa(tmpid)))
+	params = append(params, "id")
+	params = append(params, tmpid)
 	for i := 0; i < len(ist.Fields); i++ {
 		if existsField(ist.Into, ist.Fields[i]) == false {
 			return errors.New(fmt.Sprintf("no field %s in table %s.", ist.Fields[i], ist.Into))
@@ -125,6 +127,8 @@ func (ist *Insert) INSERT() error {
 	}
 
 	//add new indexdata
+	ist.Fields = append(ist.Fields, "id")
+	ist.Values = append(ist.Values, tmpid)
 	for _, v := range indexs {
 		flag := 0
 		var indexdata string
