@@ -34,7 +34,8 @@ func TestReselect(*testing.T) {
 		Class []string `json:"class, myclass"`
 	}
 	var testres test
-	res, err := FROM("student a").FIELDS("a.id myid, a.name myname, a.age myage, a.class").WHERE("a.name like '%zhenjia' or (a.age <= 25 and a.class = 'jisuanji1002')").LIMIT(0, 2).RESELECT()
+	//res, err := FROM("student a").FIELDS("a.id myid, a.name myname, a.age myage, a.class").WHERE("a.name like '%zhenjia' or (a.age <= 25 and a.class = 'jisuanji1002')").LIMIT(0, 2).RESELECT()
+	res, err := FROM("student a, score b").FIELDS("a.name myname, a.age myage, b.math, b.english, b.chinese").WHERE("a.id = b.sid and ((a.age>=22)or(b.english >80))").RESELECT()
 	if err != nil {
 		fmt.Println(res, err)
 	}

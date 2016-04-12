@@ -632,7 +632,7 @@ func (slt *Select) RESELECT() ([]byte, error) {
 
 	conn := getConn()
 	defer conn.Close()
-	defer clearTmp()
+	//defer clearTmp()
 
 	tabNum := len(slt.Froms)
 	if tabNum == 1 { //single table query
@@ -784,9 +784,12 @@ func (slt *Select) RESELECT() ([]byte, error) {
 		resstring += "}"
 		fmt.Println(resstring)
 		return []byte(resstring), nil
-	} else if tabNum == 2 { //two tables query
-		return nil, nil
-	} else { //more tables query
+	} else { //two or more tables query
+		descareskey, err := slt.cartesianProduct()
+		if err != nil {
+			return nil, err
+		}
+		fmt.Println(descareskey)
 		return nil, nil
 	}
 
@@ -832,6 +835,60 @@ func singleMerge(left, opt, right string) (string, error) {
 		break
 	default:
 		return "", errors.New("relationship sign wrong.")
+	}
+	return key, nil
+}
+
+//get Cartesian Product
+func (slt *Select) cartesianProduct() (string, error) {
+	conn := getConn()
+	defer conn.Close()
+	var alias []string
+	ids := make(map[string][]string)
+	var err error
+	for k, v := range slt.Froms {
+		key := fmt.Sprintf(REDISQL_INDEX_DATAS, database, v, "id")
+		ids[k], err = redigo.Strings(conn.Do("ZRANGE", key, 0, -1))
+		if err != nil {
+			return "", err
+		}
+		alias = append(alias, k)
+	}
+	fmt.Println("ids:", ids)
+	hkeys := make([]string, 0, 5)
+	for i, a := range alias {
+		fmt.Println("hkeys:", hkeys, "   i:", i, "   a:", a)
+		if len(ids[a]) <= 0 { //some table is null, return an unexist key
+			return "", errors.New("no result.")
+		}
+		if i == 0 {
+			for _, id := range ids[a] {
+				tmphkey := a + "_" + id + "_"
+				hkeys = append(hkeys, tmphkey)
+			}
+		} else {
+			tmphkeys := hkeys
+			hkeys = make([]string, 0, 5)
+			for _, id := range ids[a] {
+				tmphkey := a + "_" + id + "_"
+				for _, k := range tmphkeys {
+					tmphk := k + tmphkey
+					fmt.Println("k:", k, "   tmphkey:", tmphk)
+					hkeys = append(hkeys, tmphk)
+				}
+			}
+		}
+	}
+	cdtSn, err := getNextConditionSn()
+	if err != nil {
+		return "", nil
+	}
+	key := fmt.Sprintf(REDISQL_TMP_DESCARTES, database, strconv.Itoa(cdtSn))
+	for _, v := range hkeys {
+		_, err = conn.Do("HSET", key, v, 0)
+		if err != nil {
+			return "", err
+		}
 	}
 	return key, nil
 }
