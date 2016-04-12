@@ -45,14 +45,15 @@ comming soon
 #select
 ```golang
 type test struct {
-    Name []string `json:"myname"`
-    Age  []string `json:"myage"`
-    City []string `json:"mycity"`
+	Id    []string `json:"myid"`
+	Name  []string `json:"myname"`
+	Age   []string `json:"myage"`
+	Class []string `json:"class, myclass"`
 }
 var testres test
-res, err := FROM("user a").FIELDS("a.name myname, a.age myage, a.city mycity").WHERE("a.age = 24").SELECT()
+res, err := FROM("student a").FIELDS("a.id myid, a.name myname, a.age myage, a.class").WHERE("a.name like '%zhenjia' or (a.age <= 25 and a.class = 'jisuanji1002')").LIMIT(0, 2).RESELECT()
 if err != nil {
-    fmt.Println(res, err)
+	fmt.Println(res, err)
 }
 json.Unmarshal(res, &testres)
 fmt.Println(testres)

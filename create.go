@@ -33,7 +33,10 @@ func CreateDatabase(dbname string) error {
 	if err != nil {
 		return err
 	}
-
+	_, err = conn.Do("SET", fmt.Sprintf(REDISQL_CONDITION_SN, db), 0)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 

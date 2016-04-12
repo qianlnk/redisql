@@ -107,6 +107,22 @@ func getNextId(tablename string) (int, error) {
 	return tmpid + 1, nil
 }
 
+func getNextConditionSn() (int, error) {
+	conn := getConn()
+	defer conn.Close()
+
+	cdtSn, err := redigo.Int(conn.Do("GET", fmt.Sprintf(REDISQL_CONDITION_SN, database)))
+	if err != nil {
+		return 0, err
+	}
+	cdtSn = cdtSn + 1
+	_, err = conn.Do("INCRBY", fmt.Sprintf(REDISQL_CONDITION_SN, database), 1)
+	if err != nil {
+		return 0, err
+	}
+	return cdtSn, nil
+}
+
 //field opertion
 func existsField(tablename, fieldname string) bool {
 	fmt.Println("exists field:%s start...", fieldname)
@@ -264,8 +280,6 @@ func Compare(oldsign, newsign string) int {
 		case "or":
 			return REDISQL_PRIORITY_LESS
 		case "and":
-			return REDISQL_PRIORITY_LESS
-		case "#":
 			return REDISQL_PRIORITY_LESS
 		default:
 			return REDISQL_PRIORITY_ERROR

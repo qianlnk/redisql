@@ -174,7 +174,7 @@ func (slt *Select) LIMIT(start, end int) *Select {
 	if start < 0 {
 		panic("limit start can't less than 0.")
 	}
-	var limit []int
+	limit := make([]int, 2)
 	if start > end && end > 0 {
 		limit[0] = end
 		limit[1] = start
@@ -228,17 +228,17 @@ func (slt *Select) SELECT() ([]byte, error) {
 	conn := getConn()
 	defer conn.Close()
 
-	var ids map[string][]string
+	//var ids map[string][]string
 	if len(slt.Where) == 0 {
-		for k, v := range slt.Froms {
-			tmpdatas, err := redigo.Strings(conn.Do("KEYS", fmt.Sprintf(REDISQL_DATAS, database, v, "*")))
-			if err != nil {
-				return nil, err
-			}
-			for _, tmp := range tmpdatas {
-				ids[k] = append(ids[k], strings.Split(tmp, ".")[len(strings.Split(tmp, "."))-1])
-			}
-		}
+		//for k, v := range slt.Froms {
+		//	tmpdatas, err := redigo.Strings(conn.Do("KEYS", fmt.Sprintf(REDISQL_DATAS, database, v, "*")))
+		//	if err != nil {
+		//		return nil, err
+		//	}
+		//for _, tmp := range tmpdatas {
+		//ids[k] = append(ids[k], strings.Split(tmp, ".")[len(strings.Split(tmp, "."))-1])
+		//}
+		//}
 	} else {
 		//get ids
 		esStack := new_stack()
@@ -318,51 +318,6 @@ func (slt *Select) SELECT() ([]byte, error) {
 			val = tmpWhere[i]
 		}
 	}
-
-	//	} else if slt.And == nil && slt.Or == nil {
-	//		//get data id
-	//		indexData := fmt.Sprintf("%s.%s", slt.Where.Field, slt.Where.Value)
-	//		ids, err = redigo.Strings(conn.Do("SMEMBERS", fmt.Sprintf(REDISQL_INDEX_DATAS, database, slt.Froms[slt.Where.TableAlias], indexData)))
-	//		if err != nil {
-	//			return nil, err
-	//		}
-	//	}
-
-	//	var fields []interface{}
-	//	for _, f := range slt.Fields {
-	//		fields = append(fields, f.Name)
-	//	}
-
-	//	var datas [][]string
-	//	for _, id := range ids {
-	//		var params []interface{}
-	//		params = append(params, fmt.Sprintf(REDISQL_DATAS, database, slt.Froms[slt.Fields[0].TableAlias], id))
-	//		params = append(params, fields...)
-	//		//fmt.Println(params)
-	//		datas1, err := redigo.Strings(conn.Do("HMGET", params...))
-	//		if err != nil {
-	//			return nil, err
-	//		}
-	//		datas = append(datas, datas1)
-	//	}
-	//	var resstring string
-	//	resstring += "{"
-	//	for i, f := range slt.Fields {
-	//		if i > 0 {
-	//			resstring += ","
-	//		}
-	//		resstring += fmt.Sprintf("\"%s\":[", f.Alias)
-	//		for j, data := range datas {
-	//			if j > 0 {
-	//				resstring += ","
-	//			}
-	//			resstring += fmt.Sprintf("\"%s\"", data[i])
-	//		}
-	//		resstring += "]"
-	//	}
-	//	resstring += "}"
-
-	//	return []byte(resstring), nil
 	return nil, nil
 }
 
@@ -548,6 +503,7 @@ func (slt *Select) getDataIds(left, option, right string) (string, []string, err
 			key := fmt.Sprintf(REDISQL_INDEX_DATAS, database, slt.Froms[fields[0]], index)
 			fmt.Println(fmt.Sprintf(REDISQL_INDEX_DATAS, database, slt.Froms[fields[0]], fmt.Sprintf("%s.%s", fields[1], strings.Replace(strings.Replace(right, "'", "", -1), "%", "*", -1))))
 			tmpkeys, err := redigo.Strings(conn.Do("KEYS", key))
+			fmt.Println("tmpkeys:", tmpkeys)
 			if err != nil {
 				return "", nil, err
 			}
@@ -664,4 +620,218 @@ func merge(left, opt, right string) string {
 
 	}
 	return ""
+}
+
+func (slt *Select) RESELECT() ([]byte, error) {
+	fmt.Println(slt)
+	err := slt.check()
+	if err != nil {
+		fmt.Println("err:", err)
+		return nil, err
+	}
+
+	conn := getConn()
+	defer conn.Close()
+	defer clearTmp()
+
+	tabNum := len(slt.Froms)
+	if tabNum == 1 { //single table query
+		var ids []string
+		var err error
+		if len(slt.Where) == 0 { //no condition
+			//get all ids
+			var tableName string
+			for _, v := range slt.Froms {
+				tableName = v
+			}
+			key := fmt.Sprintf(REDISQL_INDEX_DATAS, database, tableName, "id")
+			ids, err = redigo.Strings(conn.Do("ZRANGE", key, 0, -1))
+			if err != nil {
+				fmt.Println("err:", err)
+				return nil, err
+			}
+		} else { //single or more condition
+			esStack := new_stack() //表达式栈
+			snStack := new_stack() //关系符栈
+			snStack.PUSH("#")      //start and end with #
+			tmpWhere := append(slt.Where, "#")
+			i := 0
+			val := tmpWhere[i]
+			for {
+				if val == "#" && snStack.GetPOP() == "#" {
+					break
+				}
+				fmt.Println("val:", val)
+				if inarray(Opertion, val) == false && inarray(CompareSign, val) == false { //not opertion or relationship sign
+					if inarray(CompareSign, snStack.GetPOP()) == false { //no relationship sign at top snStack
+						esStack.PUSH(val)
+					} else {
+						left := esStack.POP()
+						opt := snStack.POP()
+						right := val
+						ok, err := slt.judgeRight(left, right)
+						if err != nil {
+							return nil, err
+						}
+						if ok {
+							alias, tmpids, err := slt.getDataIds(left, opt, right)
+							fmt.Println("getDataIds:", alias, tmpids, err)
+							if err != nil {
+								return nil, err
+							}
+							//get condition sn
+							cdtSn, err := getNextConditionSn()
+							if err != nil {
+								return nil, err
+							}
+
+							key := fmt.Sprintf(REDISQL_TMP_CONDITION, database, slt.Froms[alias], strconv.Itoa(cdtSn))
+							for _, id := range tmpids {
+								_, err = conn.Do("SADD", key, id)
+								if err != nil {
+									return nil, err
+								}
+							}
+							esStack.PUSH(key)
+						} else {
+							return nil, errors.New("condition wrong.")
+						}
+					}
+					i++
+				} else if inarray(CompareSign, val) == true {
+					snStack.PUSH(val)
+					i++
+				} else if inarray(Opertion, val) == true {
+					res := Compare(snStack.GetPOP(), val)
+					fmt.Println(snStack.GetPOP(), val, "res=", res)
+					switch res {
+					case REDISQL_PRIORITY_LESS:
+						snStack.PUSH(val)
+						i++
+						break
+					case REDISQL_PRIORITY_EQUAL:
+						snStack.POP()
+						i++
+						break
+					case REDISQL_PRIORITY_GREATER:
+						right := esStack.POP()
+						left := esStack.POP()
+						opt := snStack.POP()
+						fmt.Printf("%s %s %s\n", left, opt, right)
+						reskey, err := singleMerge(left, opt, right)
+						if err != nil {
+							return nil, err
+						}
+						esStack.PUSH(reskey)
+						break
+					case REDISQL_PRIORITY_ERROR:
+						return nil, errors.New("wrong ralationship.")
+					}
+				}
+				val = tmpWhere[i]
+			}
+			mykey := esStack.POP()
+			ids, err = redigo.Strings(conn.Do("SMEMBERS", mykey))
+			if err != nil {
+				return nil, err
+			}
+
+		}
+		fmt.Println(ids)
+		var fields []interface{}
+		for _, f := range slt.Fields {
+			fields = append(fields, f.Name)
+		}
+
+		var datas [][]string
+		for _, id := range ids {
+			var params []interface{}
+			params = append(params, fmt.Sprintf(REDISQL_DATAS, database, slt.Froms[slt.Fields[0].TableAlias], id))
+			params = append(params, fields...)
+			fmt.Println(params)
+			datas1, err := redigo.Strings(conn.Do("HMGET", params...))
+			if err != nil {
+				return nil, err
+			}
+			datas = append(datas, datas1)
+		}
+		var resstring string
+		resstring += "{"
+		for i, f := range slt.Fields {
+			if i > 0 {
+				resstring += ","
+			}
+			resstring += fmt.Sprintf("\"%s\":[", f.Alias)
+			for j, data := range datas {
+				if slt.Top > 0 && j >= slt.Top {
+					break
+				}
+				if slt.Limit != nil && j < slt.Limit[0] {
+					continue
+				}
+				if slt.Limit != nil && j > slt.Limit[1] {
+					break
+				}
+				if slt.Limit == nil && j > 0 {
+					resstring += ","
+				} else if slt.Limit != nil && j > slt.Limit[0] {
+					resstring += ","
+				}
+				resstring += fmt.Sprintf("\"%s\"", data[i])
+			}
+			resstring += "]"
+		}
+		resstring += "}"
+		fmt.Println(resstring)
+		return []byte(resstring), nil
+	} else if tabNum == 2 { //two tables query
+		return nil, nil
+	} else { //more tables query
+		return nil, nil
+	}
+
+}
+
+func clearTmp() {
+	conn := getConn()
+	defer conn.Close()
+	keys, err := redigo.Strings(conn.Do("keys", "*.tmp.condition.*"))
+	if err != nil {
+		return
+	}
+	for _, v := range keys {
+		_, err := conn.Do("DEL", v)
+		if err != nil {
+			return
+		}
+	}
+}
+
+func singleMerge(left, opt, right string) (string, error) {
+	conn := getConn()
+	defer conn.Close()
+	cdtSn, err := getNextConditionSn()
+	if err != nil {
+		return "", err
+	}
+	tmp := strings.Split(left, ".tmp.condition.")
+	key := tmp[0] + ".tmp.condition." + strconv.Itoa(cdtSn)
+	fmt.Println(key)
+	switch opt {
+	case "and":
+		_, err = conn.Do("SINTERSTORE", key, left, right)
+		if err != nil {
+			return "", err
+		}
+		break
+	case "or":
+		_, err = conn.Do("SUNIONSTORE", key, left, right)
+		if err != nil {
+			return "", err
+		}
+		break
+	default:
+		return "", errors.New("relationship sign wrong.")
+	}
+	return key, nil
 }

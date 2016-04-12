@@ -23,3 +23,21 @@ func TestSelect(*testing.T) {
 	json.Unmarshal(res, &testres)
 	fmt.Println(testres)
 }
+func TestReselect(*testing.T) {
+	Connect("127.0.0.1", "6379", "", "tcp", 5, 120)
+	Selectdb(0)
+	ChangeDatabase("lnkgift")
+	type test struct {
+		Id    []string `json:"myid"`
+		Name  []string `json:"myname"`
+		Age   []string `json:"myage"`
+		Class []string `json:"class, myclass"`
+	}
+	var testres test
+	res, err := FROM("student a").FIELDS("a.id myid, a.name myname, a.age myage, a.class").WHERE("a.name like '%zhenjia' or (a.age <= 25 and a.class = 'jisuanji1002')").LIMIT(0, 2).RESELECT()
+	if err != nil {
+		fmt.Println(res, err)
+	}
+	json.Unmarshal(res, &testres)
+	fmt.Println(testres)
+}
