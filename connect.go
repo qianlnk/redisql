@@ -9,7 +9,6 @@ import (
 )
 
 func Connect(server, port, password, protocol string, idleMax, idleTimeput int) {
-	fmt.Println("redis server connect...")
 	if DB.server == "" {
 		if server != "" {
 			DB.server = server
@@ -73,21 +72,20 @@ func Connect(server, port, password, protocol string, idleMax, idleTimeput int) 
 }
 
 func Selectdb(db int) {
-	fmt.Println("select db start...")
 	redisdb = db
 }
 
-func ChangeDatabase(db string) {
-	fmt.Println("change database start...")
+func ChangeDatabase(db string) error {
 	if len(strings.Trim(db, " ")) <= 0 {
-		panic(errors.New(fmt.Sprintf("can not change database to ''.")))
+		return errors.New(fmt.Sprintf("can not change database to ''."))
 	}
 
 	if existsDatabase(db) == false {
-		panic(fmt.Sprintf("no database named '%s', please call func 'CreateDatabase'.", db))
+		return errors.New(fmt.Sprintf("no database named '%s', please call func 'CreateDatabase'.", db))
 	}
 
 	database = db
+	return nil
 }
 
 func GetDbInfo() (int, string) {

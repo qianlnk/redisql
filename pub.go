@@ -28,7 +28,7 @@ func existsDatabase(dbname string) bool {
 	return exists
 }
 
-func getDatabases() []string {
+func GetDatabases() []string {
 	fmt.Println("get databaases start...")
 
 	conn := getConn()
@@ -70,7 +70,7 @@ func existsTable(tablename string) bool {
 	return exists
 }
 
-func getTables() []string {
+func GetTables() []string {
 	fmt.Println("get %s tables start...", database)
 
 	conn := getConn()

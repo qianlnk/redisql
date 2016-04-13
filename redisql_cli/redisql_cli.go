@@ -9,25 +9,36 @@ import (
 )
 
 const (
-	REDISQL_CHANGE   = "change"
-	REDISQL_DATABASE = "database"
-	REDISQL_CREATE   = "create"
-	REDISQL_TABLE    = "table"
-	REDISQL_INDEX    = "index"
-	REDISQL_ON       = "on"
-	REDISQL_SELECT   = "select"
-	REDISQL_FROM     = "from"
-	REDISQL_WHERE    = "where"
-	REDISQL_TOP      = "top"
-	REDISQL_LIMIT    = "limit"
-	REDISQL_INSERT   = "insert"
-	REDISQL_INTO     = "into"
+	WELCOME_INFO = "Welcome to the REDISQL monitor. Command end with '\\n'.\n" +
+		"server version: 1.0.0\n\n" +
+		"author: qianno.xie\n" +
+		"github: github.com/qianlnk\n" +
+		"email:  qianlnk@163.com\n\n" +
+		"Type 'help' or '\\h' for help.\n\n"
+)
+const (
+	REDISQL_USE       = "use"
+	REDISQL_SHOW      = "show"
+	REDISQL_DATABASES = "databases"
+	REDISQL_TABLES    = "tables"
+	REDISQL_CREATE    = "create"
+	REDISQL_DATABASE  = "database"
+	REDISQL_TABLE     = "table"
+	REDISQL_INDEX     = "index"
+	REDISQL_ON        = "on"
+	REDISQL_SELECT    = "select"
+	REDISQL_FROM      = "from"
+	REDISQL_WHERE     = "where"
+	REDISQL_TOP       = "top"
+	REDISQL_LIMIT     = "limit"
+	REDISQL_INSERT    = "insert"
+	REDISQL_INTO      = "into"
 )
 
 func main() {
 	redisql.Connect("127.0.0.1", "6379", "", "tcp", 5, 120)
 	redisql.Selectdb(0)
-	fmt.Println("redisql 1.0 127.0.0.1")
+	fmt.Printf(WELCOME_INFO)
 	database := "redisql"
 
 	reader := bufio.NewReader(os.Stdin)
@@ -50,22 +61,44 @@ func main() {
 			cmd = strings.Replace(cmd, c, specialChar1[i], -1)
 		}
 		cmd = strings.ToLower(cmd)
-		fmt.Print(cmd)
 		cmds := strings.Fields(cmd)
 		if len(cmds) == 0 {
 			continue
 		}
 		switch cmds[0] {
-		case REDISQL_CHANGE:
-			if len(cmds) != 3 {
+		case REDISQL_USE:
+			if len(cmds) != 2 {
 				fmt.Println("cmd err.")
 				break
 			}
-			if cmds[1] != REDISQL_DATABASE {
-				fmt.Printf("unknow cmd %s.\n", cmds[1])
+			err := redisql.ChangeDatabase(cmds[1])
+			if err != nil {
+				fmt.Println(err.Error())
 				break
 			}
-			redisql.ChangeDatabase(cmds[2])
+			database = cmds[1]
+			break
+		case REDISQL_SHOW:
+			if len(cmds) != 2 {
+				fmt.Println("cmd err.")
+				break
+			}
+			switch cmds[1] {
+			case REDISQL_DATABASES:
+				dbs := redisql.GetDatabases()
+				fmt.Println("+------------------------------+")
+				fmt.Printf("|%-30s|\n", "Database")
+				fmt.Println("+------------------------------+")
+				for _, db := range dbs {
+					fmt.Printf("|%-30s|\n", db)
+				}
+				fmt.Println("+------------------------------+")
+				break
+			case REDISQL_TABLES:
+				break
+			default:
+				fmt.Println("cmd err.")
+			}
 			break
 		case REDISQL_CREATE:
 			if len(cmds) < 3 {
@@ -93,13 +126,23 @@ func main() {
 					break
 				}
 				var fields string
+				var types string
 				for i, f := range cmds {
 					if i < 4 || i == len(cmds)-1 {
 						continue
 					}
-					fields += f + " "
+					if i%2 == 0 {
+						if i > 4 {
+							fields += ","
+						}
+						fields += f
+					} else {
+						types = types + f + " "
+					}
+
 				}
-				err := redisql.TABLE(cmds[2]).FIELDS(fields).CREATE()
+				fmt.Println("table:", cmds[2], "fields:", fields)
+				err := redisql.TABLE(cmds[2]).FIELDS(fields).TYPES(types).CREATE()
 				if err != nil {
 					fmt.Println(err.Error())
 				}
