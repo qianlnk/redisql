@@ -217,140 +217,36 @@ func (slt *Select) check() error {
 	return nil
 }
 
-//support single table query first，not support select * now.
-func (slt *Select) SELECT() ([]byte, error) {
-	fmt.Println(slt)
-	err := slt.check()
-	if err != nil {
-		return nil, err
-	}
-
+func (slt *Select) getEsDataIds(cartesianKey, left, opt, right string) (string, error) {
+	fmt.Printf("getEsDataIds start, cartesianKey = %s, left = %s, opt = %s, right = %s\n", cartesianKey, left, opt, right)
 	conn := getConn()
 	defer conn.Close()
 
-	//var ids map[string][]string
-	if len(slt.Where) == 0 {
-		//for k, v := range slt.Froms {
-		//	tmpdatas, err := redigo.Strings(conn.Do("KEYS", fmt.Sprintf(REDISQL_DATAS, database, v, "*")))
-		//	if err != nil {
-		//		return nil, err
-		//	}
-		//for _, tmp := range tmpdatas {
-		//ids[k] = append(ids[k], strings.Split(tmp, ".")[len(strings.Split(tmp, "."))-1])
-		//}
-		//}
-	} else {
-		//get ids
-		esStack := new_stack()
-		snStack := new_stack()
-		snStack.PUSH("#")
-		tmpWhere := append(slt.Where, "#")
-		i := 0
-		val := tmpWhere[i]
-		for {
-			if val == "#" && snStack.GetPOP() == "#" {
-				break
-			}
-			fmt.Println(val)
-			if inarray(Opertion, val) == false && inarray(CompareSign, val) == false {
-				if inarray(CompareSign, snStack.GetPOP()) == false {
-					esStack.PUSH(val)
-				} else {
-					left := esStack.POP()
-					opt := snStack.POP()
-					right := val
-					ok, err := slt.judgeRight(left, right)
-					if err != nil {
-						return nil, err
-					}
-					if ok {
-						alias, tmpids, err := slt.getDataIds(left, opt, right)
-						if err != nil {
-							return nil, err
-						}
-						var idstring string
-						idstring = alias
-						for _, v := range tmpids {
-							idstring = idstring + " " + v
-						}
-						fmt.Println(idstring)
-						esStack.PUSH(idstring)
-					} else { //store incidence relation, opt must be '='
-						if opt != "=" {
-							return nil, errors.New(fmt.Sprintf("incidence relation %s %s %s not support, option must be '='.", left, opt, right))
-						}
-						tmpEs := left + " " + opt + " " + right
-						res, err := slt.getEsDataIds(tmpEs)
-						if err != nil {
-							return nil, err
-						}
-						fmt.Printf(res)
-						esStack.PUSH(res)
-					}
-				}
-				i++
-			} else if inarray(CompareSign, val) == true {
-				snStack.PUSH(val)
-				i++
-			} else if inarray(Opertion, val) == true {
-				res := Compare(snStack.GetPOP(), val)
-				fmt.Println(snStack.GetPOP(), val, "res=", res)
-				switch res {
-				case REDISQL_PRIORITY_LESS:
-					snStack.PUSH(val)
-					i++
-					break
-				case REDISQL_PRIORITY_EQUAL:
-					snStack.POP()
-					i++
-					break
-				case REDISQL_PRIORITY_GREATER:
-					right := esStack.POP()
-					fmt.Printf("right:%s\n", right)
-					left := esStack.POP()
-					opt := snStack.POP()
-					fmt.Printf("%s %s %s\n", left, opt, right)
-					res := merge(left, opt, right)
-					fmt.Printf("res:%s\n", res)
-					esStack.PUSH(res)
-				}
-			}
-			val = tmpWhere[i]
-		}
+	lefts := strings.Split(left, ".")
+	if len(lefts) != 2 {
+		return "", errors.New(fmt.Sprintf("unknow field '%s'.", left))
 	}
-	return nil, nil
-}
-
-func (slt *Select) getEsDataIds(expression string) (string, error) {
-	fmt.Printf("getEsDataIds start, expression = %s\n", expression)
-	conn := getConn()
-	defer conn.Close()
-	es := strings.Split(expression, " ")
-	left := strings.Split(es[0], ".")
-	if len(left) != 2 {
-		return "", errors.New(fmt.Sprintf("unknow field '%s'.", es[0]))
+	if existsTable(slt.Froms[lefts[0]]) == false {
+		return "", errors.New(fmt.Sprintf("table %s not exist.", slt.Froms[lefts[0]]))
 	}
-	if existsTable(slt.Froms[left[0]]) == false {
-		return "", errors.New(fmt.Sprintf("table %s not exist.", slt.Froms[left[0]]))
+	if existsField(slt.Froms[lefts[0]], lefts[1]) == false {
+		return "", errors.New(fmt.Sprintf("field %s not found in table %s.", lefts[1], slt.Froms[lefts[0]]))
 	}
-	if existsField(slt.Froms[left[0]], left[1]) == false {
-		return "", errors.New(fmt.Sprintf("field %s not found in table %s.", left[1], slt.Froms[left[0]]))
-	}
-	lefttype, err := getFieldType(slt.Froms[left[0]], left[1])
+	lefttype, err := getFieldType(slt.Froms[lefts[0]], lefts[1])
 	if err != nil {
 		return "", err
 	}
-	right := strings.Split(es[2], ".")
-	if len(right) != 2 {
-		return "", errors.New(fmt.Sprintf("unknow field '%s'.", es[2]))
+	rights := strings.Split(right, ".")
+	if len(rights) != 2 {
+		return "", errors.New(fmt.Sprintf("unknow field '%s'.", right))
 	}
-	if existsTable(slt.Froms[right[0]]) == false {
-		return "", errors.New(fmt.Sprintf("table %s not exist.", slt.Froms[right[0]]))
+	if existsTable(slt.Froms[rights[0]]) == false {
+		return "", errors.New(fmt.Sprintf("table %s not exist.", slt.Froms[rights[0]]))
 	}
-	if existsField(slt.Froms[right[0]], right[1]) == false {
-		return "", errors.New(fmt.Sprintf("field %s not found in table %s.", right[1], slt.Froms[right[0]]))
+	if existsField(slt.Froms[rights[0]], rights[1]) == false {
+		return "", errors.New(fmt.Sprintf("field %s not found in table %s.", rights[1], slt.Froms[rights[0]]))
 	}
-	righttype, err := getFieldType(slt.Froms[right[0]], right[1])
+	righttype, err := getFieldType(slt.Froms[rights[0]], rights[1])
 	if err != nil {
 		return "", err
 	}
@@ -358,11 +254,15 @@ func (slt *Select) getEsDataIds(expression string) (string, error) {
 		return "", errors.New(fmt.Sprintf("can not use type '%s' = '%s'.", lefttype, righttype))
 	}
 	fmt.Println(lefttype, righttype)
-	var res string
+	cdtSn, err := getNextConditionSn()
+	if err != nil {
+		return "", err
+	}
+	cdtKey := fmt.Sprintf(REDISQL_TMP_CONDITION, database, slt.Froms[lefts[0]]+"."+slt.Froms[rights[0]], strconv.Itoa(cdtSn))
 	switch lefttype {
 	case REDISQL_TYPE_NUMBER:
-		if left[1] == "id" {
-			key := fmt.Sprintf(REDISQL_INDEX_DATAS, database, slt.Froms[right[0]], right[1])
+		if lefts[1] == "id" {
+			key := fmt.Sprintf(REDISQL_INDEX_DATAS, database, slt.Froms[rights[0]], rights[1])
 			fmt.Println("key:", key)
 			tmpids, err := redigo.Strings(conn.Do("ZRANGE", key, 0, -1, "withscores"))
 			if err != nil {
@@ -370,91 +270,151 @@ func (slt *Select) getEsDataIds(expression string) (string, error) {
 				return "", err
 			}
 			for i := 1; i < len(tmpids); i = i + 2 {
-				if i != 1 {
-					res += "^"
+				tmpkey1 := lefts[0] + "_" + tmpids[i] + "_" + rights[0] + "_" + tmpids[i-1] + "_"
+				tmpkey2 := rights[0] + "_" + tmpids[i-1] + "_" + lefts[0] + "_" + tmpids[i] + "_"
+				fmt.Println(cartesianKey, tmpkey1)
+				hkeys, err := redigo.Strings(conn.Do("HKEYS", cartesianKey))
+				if err != nil {
+					return "", err
 				}
-				res = res + left[0] + " " + tmpids[i] + "&" + right[0] + " " + tmpids[i-1]
+				for _, hk := range hkeys {
+					if strings.Contains(hk, tmpkey1) || strings.Contains(hk, tmpkey2) {
+						_, err = conn.Do("SADD", cdtKey, hk)
+						if err != nil {
+							return "", err
+						}
+					}
+				}
 			}
-			fmt.Println(res)
-		} else if right[1] == "id" {
-			key := fmt.Sprintf(REDISQL_INDEX_DATAS, database, slt.Froms[left[0]], left[1])
+		} else if rights[1] == "id" {
+			key := fmt.Sprintf(REDISQL_INDEX_DATAS, database, slt.Froms[lefts[0]], lefts[1])
 			tmpids, err := redigo.Strings(conn.Do("ZRANGE", key, 0, -1, "withsocres"))
 			if err != nil {
 				return "", err
 			}
 			for i := 1; i < len(tmpids); i = i + 2 {
-				if i != 1 {
-					res += "^"
+				tmpkey1 := rights[0] + "_" + tmpids[i] + "_" + lefts[0] + " " + tmpids[i-1] + "_"
+				tmpkey2 := lefts[0] + " " + tmpids[i-1] + "_" + rights[0] + "_" + tmpids[i] + "_"
+				hkeys, err := redigo.Strings(conn.Do("HKEYS", cartesianKey))
+				if err != nil {
+					return "", err
 				}
-				res = res + right[0] + " " + tmpids[i] + "&" + left[0] + " " + tmpids[i-1]
+				for _, hk := range hkeys {
+					if strings.Contains(hk, tmpkey1) || strings.Contains(hk, tmpkey2) {
+						_, err = conn.Do("SADD", cdtKey, hk)
+						if err != nil {
+							return "", err
+						}
+					}
+				}
 			}
 		} else {
-			leftkey := fmt.Sprintf(REDISQL_INDEX_DATAS, database, slt.Froms[left[0]], left[1])
+			leftkey := fmt.Sprintf(REDISQL_INDEX_DATAS, database, slt.Froms[lefts[0]], lefts[1])
 			leftids, err := redigo.Strings(conn.Do("ZRANGE", leftkey, 0, -1, "withsocres"))
 			if err != nil {
 				return "", err
 			}
 			for i := 1; i < len(leftids); i = i + 2 {
-				rightkey := fmt.Sprintf(REDISQL_INDEX_DATAS, database, slt.Froms[right[0]], right[1])
-				rightids, err := redigo.Strings(conn.Do("ZRANGEBYSCORE", rightkey, leftids[i-1], leftids[i-1]))
+				rightkey := fmt.Sprintf(REDISQL_INDEX_DATAS, database, slt.Froms[rights[0]], rights[1])
+				rightids, err := redigo.Strings(conn.Do("ZRANGEBYSCORE", rightkey, leftids[i], leftids[i]))
 				if err != nil {
 					return "", err
 				}
-				tmprightids := right[0]
 				for _, id := range rightids {
-					tmprightids = tmprightids + " " + id
+					tmpkey1 := lefts[0] + "_" + leftids[i-1] + "_" + rights[0] + "_" + id + "_"
+					tmpkey2 := rights[0] + "_" + id + "_" + lefts[0] + "_" + leftids[i-1] + "_"
+					hkeys, err := redigo.Strings(conn.Do("HKEYS", cartesianKey))
+					if err != nil {
+						return "", err
+					}
+					for _, hk := range hkeys {
+						if strings.Contains(hk, tmpkey1) || strings.Contains(hk, tmpkey2) {
+							_, err = conn.Do("SADD", cdtKey, hk)
+							if err != nil {
+								return "", err
+							}
+						}
+					}
 				}
-				if len(tmprightids) == 0 {
-					continue
-				}
-				if i != 1 {
-					res += "^"
-				}
-				res = res + left[0] + " " + leftids[i] + "&" + tmprightids
 			}
 		}
 		break
 	case REDISQL_TYPE_STRING:
-		leftkey := fmt.Sprintf(REDISQL_INDEX_DATAS, database, slt.Froms[left[0]], left[1]+".*")
+		leftkey := fmt.Sprintf(REDISQL_INDEX_DATAS, database, slt.Froms[lefts[0]], lefts[1]+".*")
 		tmpkeys, err := redigo.Strings(conn.Do("KEYS", leftkey))
 		if err != nil {
 			return "", err
 		}
-		for i, k := range tmpkeys {
+		for _, k := range tmpkeys {
 			leftids, err := redigo.Strings(conn.Do("SMEMBERS", k))
 			if err != nil {
 				return "", err
 			}
 			values := strings.Split(k, ".")
 			value := values[len(values)-1]
-			rightkey := fmt.Sprintf(REDISQL_INDEX_DATAS, database, slt.Froms[right[0]], right[1]+"."+value)
+			rightkey := fmt.Sprintf(REDISQL_INDEX_DATAS, database, slt.Froms[rights[0]], rights[1]+"."+value)
 			rightids, err := redigo.Strings(conn.Do("SMEMBERS", rightkey))
 			if err != nil {
 				return "", err
 			}
-			if len(rightids) == 0 {
+			if len(rightids) <= 0 || len(leftids) <= 0 {
 				continue
 			}
-			if i != 1 {
-				res += "^"
-			}
+			for _, l := range leftids {
+				for _, r := range rightids {
+					tmpkey1 := lefts[0] + "_" + l + "_" + rights[0] + "_" + r + "_"
+					tmpkey2 := rights[0] + "_" + r + "_" + lefts[0] + "_" + l + "_"
+					hkeys, err := redigo.Strings(conn.Do("HKEYS", cartesianKey))
+					if err != nil {
+						return "", err
+					}
+					for _, hk := range hkeys {
+						if strings.Contains(hk, tmpkey1) || strings.Contains(hk, tmpkey2) {
+							_, err = conn.Do("SADD", cdtKey, hk)
+							if err != nil {
+								return "", err
+							}
+						}
+					}
+				}
 
-			res = res + left[0]
-			for _, v := range leftids {
-				res = res + " " + v
-			}
-			res = res + "&" + right[0]
-			for _, v := range rightids {
-				res = res + " " + v
 			}
 		}
 		break
 	case REDISQL_TYPE_DATE:
+		leftkey := fmt.Sprintf(REDISQL_INDEX_DATAS, database, slt.Froms[lefts[0]], lefts[1])
+		leftids, err := redigo.Strings(conn.Do("ZRANGE", leftkey, 0, -1, "withsocres"))
+		if err != nil {
+			return "", err
+		}
+		for i := 1; i < len(leftids); i = i + 2 {
+			rightkey := fmt.Sprintf(REDISQL_INDEX_DATAS, database, slt.Froms[rights[0]], rights[1])
+			rightids, err := redigo.Strings(conn.Do("ZRANGEBYSCORE", rightkey, leftids[i], leftids[i]))
+			if err != nil {
+				return "", err
+			}
+			for _, id := range rightids {
+				tmpkey1 := lefts[0] + "_" + leftids[i-1] + "_" + rights[0] + "_" + id + "_"
+				tmpkey2 := rights[0] + "_" + id + "_" + lefts[0] + "_" + leftids[i-1] + "_"
+				hkeys, err := redigo.Strings(conn.Do("HKEYS", cartesianKey))
+				if err != nil {
+					return "", err
+				}
+				for _, hk := range hkeys {
+					if strings.Contains(hk, tmpkey1) || strings.Contains(hk, tmpkey2) {
+						_, err = conn.Do("SADD", cdtKey, hk)
+						if err != nil {
+							return "", err
+						}
+					}
+				}
+			}
+		}
 		break
 	default:
 		return "", errors.New("data type err.")
 	}
-	return res, nil
+	return cdtKey, nil
 }
 
 func (slt *Select) getDataIds(left, option, right string) (string, []string, error) {
@@ -529,7 +489,8 @@ func (slt *Select) getDataIds(left, option, right string) (string, []string, err
 			score = right
 		} else {
 			tmpRight := strings.Replace(right, "'", "", -1)
-			t, err := time.Parse("2006-01-02 15:04:05", tmpRight)
+			fmt.Println(tmpRight)
+			t, err := time.Parse("20060102150405", tmpRight)
 			if err != nil {
 				return "", nil, err
 			}
@@ -622,7 +583,7 @@ func merge(left, opt, right string) string {
 	return ""
 }
 
-func (slt *Select) RESELECT() ([]byte, error) {
+func (slt *Select) SELECT() ([]byte, error) {
 	fmt.Println(slt)
 	err := slt.check()
 	if err != nil {
@@ -632,7 +593,7 @@ func (slt *Select) RESELECT() ([]byte, error) {
 
 	conn := getConn()
 	defer conn.Close()
-	//defer clearTmp()
+	defer clearTmp()
 
 	tabNum := len(slt.Froms)
 	if tabNum == 1 { //single table query
@@ -785,12 +746,168 @@ func (slt *Select) RESELECT() ([]byte, error) {
 		fmt.Println(resstring)
 		return []byte(resstring), nil
 	} else { //two or more tables query
-		descareskey, err := slt.cartesianProduct()
+		cartesiankey, err := slt.cartesianProduct()
 		if err != nil {
 			return nil, err
 		}
-		fmt.Println(descareskey)
-		return nil, nil
+		fmt.Println(cartesiankey)
+		var ids []string
+		if len(slt.Where) == 0 { //no condition
+			//get all ids
+			ids, err = redigo.Strings(conn.Do("HKEYS", cartesiankey))
+			if err != nil {
+				fmt.Println("err:", err)
+				return nil, err
+			}
+		} else { //single or more condition
+			esStack := new_stack() //表达式栈
+			snStack := new_stack() //关系符栈
+			snStack.PUSH("#")      //start and end with #
+			tmpWhere := append(slt.Where, "#")
+			i := 0
+			val := tmpWhere[i]
+			for {
+				if val == "#" && snStack.GetPOP() == "#" {
+					break
+				}
+				fmt.Println("val:", val)
+				if inarray(Opertion, val) == false && inarray(CompareSign, val) == false { //not opertion or relationship sign
+					if inarray(CompareSign, snStack.GetPOP()) == false { //no relationship sign at top snStack
+						esStack.PUSH(val)
+					} else {
+						left := esStack.POP()
+						opt := snStack.POP()
+						right := val
+						ok, err := slt.judgeRight(left, right)
+						if err != nil {
+							return nil, err
+						}
+						if ok {
+							alias, tmpids, err := slt.getDataIds(left, opt, right)
+							fmt.Println("getDataIds:", alias, tmpids, err)
+							if err != nil {
+								return nil, err
+							}
+							//get condition sn
+							cdtSn, err := getNextConditionSn()
+							if err != nil {
+								return nil, err
+							}
+
+							key := fmt.Sprintf(REDISQL_TMP_CONDITION, database, slt.Froms[alias], strconv.Itoa(cdtSn))
+							for _, id := range tmpids {
+								tmpkey := alias + "_" + id + "_"
+								hkeys, err := redigo.Strings(conn.Do("HKEYS", cartesiankey))
+								if err != nil {
+									return nil, err
+								}
+								for _, hk := range hkeys {
+									if strings.Contains(hk, tmpkey) {
+										_, err = conn.Do("SADD", key, hk)
+										if err != nil {
+											return nil, err
+										}
+									}
+								}
+							}
+							esStack.PUSH(key)
+						} else {
+							key, err := slt.getEsDataIds(cartesiankey, left, opt, right)
+							if err != nil {
+								return nil, err
+							}
+							esStack.PUSH(key)
+						}
+					}
+					i++
+				} else if inarray(CompareSign, val) == true {
+					snStack.PUSH(val)
+					i++
+				} else if inarray(Opertion, val) == true {
+					res := Compare(snStack.GetPOP(), val)
+					fmt.Println(snStack.GetPOP(), val, "res=", res)
+					switch res {
+					case REDISQL_PRIORITY_LESS:
+						snStack.PUSH(val)
+						i++
+						break
+					case REDISQL_PRIORITY_EQUAL:
+						snStack.POP()
+						i++
+						break
+					case REDISQL_PRIORITY_GREATER:
+						right := esStack.POP()
+						left := esStack.POP()
+						opt := snStack.POP()
+						fmt.Printf("%s %s %s\n", left, opt, right)
+						reskey, err := singleMerge(left, opt, right)
+						if err != nil {
+							return nil, err
+						}
+						esStack.PUSH(reskey)
+						break
+					case REDISQL_PRIORITY_ERROR:
+						return nil, errors.New("wrong ralationship.")
+					}
+				}
+				val = tmpWhere[i]
+			}
+			mykey := esStack.POP()
+			ids, err = redigo.Strings(conn.Do("SMEMBERS", mykey))
+			if err != nil {
+				return nil, err
+			}
+
+		}
+		fmt.Println(ids)
+		var datas [][]string
+		for _, id := range ids {
+			tmpids := strings.Split(id, "_")
+			idmap := make(map[string]string)
+			for i := 1; i < len(tmpids); i = i + 2 {
+				idmap[tmpids[i-1]] = tmpids[i]
+			}
+			var dataid []string
+			for _, f := range slt.Fields {
+				key := fmt.Sprintf(REDISQL_DATAS, database, slt.Froms[f.TableAlias], idmap[f.TableAlias])
+				dataf, err := redigo.String(conn.Do("HGET", key, f.Name))
+				if err != nil {
+					return nil, err
+				}
+				dataid = append(dataid, dataf)
+			}
+			datas = append(datas, dataid)
+		}
+
+		var resstring string
+		resstring += "{"
+		for i, f := range slt.Fields {
+			if i > 0 {
+				resstring += ","
+			}
+			resstring += fmt.Sprintf("\"%s\":[", f.Alias)
+			for j, data := range datas {
+				if slt.Top > 0 && j >= slt.Top {
+					break
+				}
+				if slt.Limit != nil && j < slt.Limit[0] {
+					continue
+				}
+				if slt.Limit != nil && j > slt.Limit[1] {
+					break
+				}
+				if slt.Limit == nil && j > 0 {
+					resstring += ","
+				} else if slt.Limit != nil && j > slt.Limit[0] {
+					resstring += ","
+				}
+				resstring += fmt.Sprintf("\"%s\"", data[i])
+			}
+			resstring += "]"
+		}
+		resstring += "}"
+		fmt.Println(resstring)
+		return []byte(resstring), nil
 	}
 
 }
@@ -883,7 +1000,7 @@ func (slt *Select) cartesianProduct() (string, error) {
 	if err != nil {
 		return "", nil
 	}
-	key := fmt.Sprintf(REDISQL_TMP_DESCARTES, database, strconv.Itoa(cdtSn))
+	key := fmt.Sprintf(REDISQL_TMP_CARTESIAN, database, strconv.Itoa(cdtSn))
 	for _, v := range hkeys {
 		_, err = conn.Do("HSET", key, v, 0)
 		if err != nil {

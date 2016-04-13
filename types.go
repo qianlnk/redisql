@@ -37,7 +37,7 @@ const (
 	REDISQL_DATAS         = "%s.%s.data.%s"                 //hset lnkgift.user.data.1 name qianno
 	REDISQL_INDEX_DATAS   = "%s.%s.index.%s"                //string: sadd lnkgift.user.index.name.qianno 1 or number,date: zadd lnkgift.user.index.age 26 1
 	REDISQL_TMP_CONDITION = "%s.%s.tmp.condition.%s"        //sadd lnkgift.user.tmp.condition.1 1 2 3 4
-	REDISQL_TMP_DESCARTES = "%s.tmp.condition.descartes.%s" //hset lnkgift.tmp.condition.descartes.1 a_1_b_2_c_1_
+	REDISQL_TMP_CARTESIAN = "%s.tmp.condition.cartesian.%s" //hset lnkgift.tmp.condition.descartes.1 a_1_b_2_c_1_
 )
 
 type RedisConnect struct {
