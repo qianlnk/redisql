@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"qianno.xie/redisql"
+	"strconv"
 	"strings"
 )
 
@@ -21,6 +22,7 @@ const (
 	REDISQL_SHOW      = "show"
 	REDISQL_DATABASES = "databases"
 	REDISQL_TABLES    = "tables"
+	REDISQL_DESC      = "desc"
 	REDISQL_CREATE    = "create"
 	REDISQL_DATABASE  = "database"
 	REDISQL_TABLE     = "table"
@@ -34,6 +36,56 @@ const (
 	REDISQL_INSERT    = "insert"
 	REDISQL_INTO      = "into"
 )
+
+func show(fields []string, datas [][]string, usetime float64) {
+	maxlen := make(map[int]int)
+	for i, data := range datas {
+		for j, dt := range data {
+			if i == 0 {
+				if len(dt) > len(fields[j]) {
+					maxlen[j] = len(dt)
+				} else {
+					maxlen[j] = len(fields[j])
+				}
+			} else {
+				if len(dt) > maxlen[j] {
+					maxlen[j] = len(dt)
+				}
+			}
+		}
+	}
+	line := "+"
+	for _, v := range maxlen {
+		for i := 0; i <= v; i++ {
+			line += "-"
+		}
+		line += "+"
+	}
+	if line == "+" {
+		fmt.Printf("Empty set (%-.2f sec)\n\n", usetime)
+		return
+	}
+	fmt.Println(line)
+	fmt.Printf("|")
+	for i, f := range fields {
+		format := "%-" + strconv.Itoa(maxlen[i]+1) + "s|"
+		fmt.Printf(format, f)
+	}
+	fmt.Printf("\n")
+	fmt.Println(line)
+	count := 0
+	for _, data := range datas {
+		fmt.Printf("|")
+		for i, dt := range data {
+			format := "%-" + strconv.Itoa(maxlen[i]+1) + "s|"
+			fmt.Printf(format, dt)
+		}
+		fmt.Printf("\n")
+		count++
+	}
+	fmt.Println(line)
+	fmt.Printf("%d rows int set (%-.2f sec)\n\n", count, usetime)
+}
 
 func main() {
 	redisql.Connect("127.0.0.1", "6379", "", "tcp", 5, 120)
@@ -79,26 +131,80 @@ func main() {
 			database = cmds[1]
 			break
 		case REDISQL_SHOW:
-			if len(cmds) != 2 {
+			if len(cmds) < 2 {
 				fmt.Println("cmd err.")
 				break
 			}
 			switch cmds[1] {
 			case REDISQL_DATABASES:
-				dbs := redisql.GetDatabases()
-				fmt.Println("+------------------------------+")
-				fmt.Printf("|%-30s|\n", "Database")
-				fmt.Println("+------------------------------+")
-				for _, db := range dbs {
-					fmt.Printf("|%-30s|\n", db)
+				if len(cmds) != 2 {
+					fmt.Println("cmd err.")
+					break
 				}
-				fmt.Println("+------------------------------+")
+				dbs, usetime, err := redisql.GetDatabases()
+				if err != nil {
+					fmt.Println(err.Error())
+					break
+				}
+				var fields []string
+				var datas [][]string
+				fields = append(fields, "Database")
+				for _, db := range dbs {
+					var tmpdb []string
+					tmpdb = append(tmpdb, db)
+					datas = append(datas, tmpdb)
+				}
+				show(fields, datas, usetime)
 				break
 			case REDISQL_TABLES:
+				if len(cmds) != 2 {
+					fmt.Println("cmd err.")
+					break
+				}
+				tbs, usetime, err := redisql.GetTables()
+				if err != nil {
+					fmt.Println(err.Error())
+					break
+				}
+				var fields []string
+				var datas [][]string
+				fields = append(fields, "Tables_in_"+database)
+				for _, tb := range tbs {
+					var tmptb []string
+					tmptb = append(tmptb, tb)
+					datas = append(datas, tmptb)
+				}
+				show(fields, datas, usetime)
+				break
+			case REDISQL_INDEX:
+				if len(cmds) != 4 {
+					fmt.Println("cmd err.")
+					break
+				} else {
+					if cmds[2] != REDISQL_FROM {
+						fmt.Println("cmd err.")
+						break
+					}
+				}
 				break
 			default:
 				fmt.Println("cmd err.")
 			}
+			break
+		case REDISQL_DESC:
+			if len(cmds) != 2 {
+				fmt.Println("cmd err.")
+				break
+			}
+			datas, usetime, err := redisql.GetTableInfo(cmds[1])
+			if err != nil {
+				fmt.Println(err.Error())
+				break
+			}
+			var fields []string
+			fields = append(fields, "Field")
+			fields = append(fields, "Type")
+			show(fields, datas, usetime)
 			break
 		case REDISQL_CREATE:
 			if len(cmds) < 3 {
@@ -180,7 +286,7 @@ func main() {
 					break
 				}
 				fields = fields + v + " "
-				fromflag = fromflag - fromflag + i
+				fromflag = i
 			}
 			var from string
 			var whereflag int
@@ -192,7 +298,7 @@ func main() {
 					break
 				}
 				from = from + v + " "
-				whereflag = whereflag - whereflag + i
+				whereflag = i
 			}
 			var where string
 			var limitflag int

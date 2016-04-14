@@ -2,9 +2,11 @@ package redisql
 
 import (
 	"container/list"
+	"errors"
 	"fmt"
 	redigo "github.com/garyburd/redigo/redis"
 	"strings"
+	"time"
 )
 
 func getConn() redigo.Conn {
@@ -15,8 +17,6 @@ func getConn() redigo.Conn {
 
 //database operation
 func existsDatabase(dbname string) bool {
-	fmt.Println("exists database %s start...", dbname)
-
 	conn := getConn()
 	defer conn.Close()
 	exists, err := redigo.Bool(conn.Do("HEXISTS", REDISQL_DATABASES, dbname))
@@ -28,22 +28,67 @@ func existsDatabase(dbname string) bool {
 	return exists
 }
 
-func GetDatabases() []string {
-	fmt.Println("get databaases start...")
+func GetDatabases() ([]string, float64, error) {
+	conn := getConn()
+	defer conn.Close()
+	start := time.Now()
+	dbs, err := redigo.Strings(conn.Do("HKEYS", REDISQL_DATABASES))
+	end := time.Now()
+	usetime := end.Sub(start).Seconds()
+	if err != nil {
+		return nil, usetime, errors.New("ERROR 1045: " + err.Error())
+	}
+	return dbs, usetime, nil
+}
 
+func GetTables() ([]string, float64, error) {
+	if database == "" {
+		return nil, 0, errors.New("ERROR 1046: No database selected")
+	}
+	conn := getConn()
+	defer conn.Close()
+	start := time.Now()
+	tables, err := redigo.Strings(conn.Do("HKEYS", fmt.Sprintf(REDISQL_TABLES, database)))
+	end := time.Now()
+	usetime := end.Sub(start).Seconds()
+	if err != nil {
+		return nil, usetime, errors.New("ERROR 1045: " + err.Error())
+	}
+	return tables, usetime, nil
+}
+
+func GetTableInfo(tablename string) ([][]string, float64, error) {
+	if database == "" {
+		return nil, 0, errors.New("ERROR 1046: No database selected")
+	}
+	if existsTable(tablename) == false {
+		return nil, 0, errors.New(fmt.Sprintf("ERROR 1146: Table '%s.%s' doesn't exist", database, tablename))
+	}
+
+	start := time.Now()
 	conn := getConn()
 	defer conn.Close()
 
-	dbs, err := redigo.Strings(conn.Do("HKEYS", REDISQL_DATABASES))
+	fieldstypes, err := redigo.Strings(conn.Do("HGETALL", fmt.Sprintf(REDISQL_FIELDS, database, tablename)))
+	end := time.Now()
+	usetime := end.Sub(start).Seconds()
 	if err != nil {
-		fmt.Println(err.Error())
-		return nil
+		return nil, usetime, errors.New("ERROR 1045: " + err.Error())
 	}
-	return dbs
+
+	var res [][]string
+	for i := 0; i < len(fieldstypes); i += 2 {
+		var tmpres []string
+		tmpres = append(tmpres, fieldstypes[i])
+		tmpres = append(tmpres, fieldstypes[i+1])
+		res = append(res, tmpres)
+	}
+	end = time.Now()
+	usetime = end.Sub(start).Seconds()
+	return res, usetime, nil
 }
 
 func getTableNumber() (int, error) {
-	fmt.Println("get " + database + " table number start...")
 	conn := getConn()
 	defer conn.Close()
 
@@ -57,8 +102,6 @@ func getTableNumber() (int, error) {
 
 //table opertion
 func existsTable(tablename string) bool {
-	fmt.Println("exists table %s.%s start...", database, tablename)
-
 	conn := getConn()
 	defer conn.Close()
 
@@ -68,20 +111,6 @@ func existsTable(tablename string) bool {
 		return false
 	}
 	return exists
-}
-
-func GetTables() []string {
-	fmt.Println("get %s tables start...", database)
-
-	conn := getConn()
-	defer conn.Close()
-
-	tables, err := redigo.Strings(conn.Do("HKEYS", fmt.Sprintf(REDISQL_TABLES, database)))
-	if err != nil {
-		fmt.Println(err.Error())
-		return nil
-	}
-	return tables
 }
 
 func getCount(tablename string) (int, error) {
