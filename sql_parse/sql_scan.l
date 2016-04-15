@@ -203,7 +203,8 @@ SET 	{
 		return SET;
 	}
 
-SELECT 	{
+SELECT |
+select {
 		if(!create_keyword_node("SELECT"))
 		{
 			return 0;
@@ -242,6 +243,7 @@ SELECT 	{
 	}
 
 '[^'\n]*' {
+	printf("%s", yytext);
 		if(!create_string_const_node(yytext))
 		{
 			return 0;
@@ -297,7 +299,7 @@ SELECT 	{
 	}
 
 . 	{
-		printf("非法SQL字符串:%s\n", yytext);
+		printf("yytext:%s\n", yytext);
 		
 		return 0;
 	}
@@ -325,7 +327,7 @@ int create_keyword_node(char * pszKeyWordName)
 
 	if(!p)
 	{
-		printf("创建结点失败\n");
+		printf("malloc failed\n");
 
 		return 0;
 	}
@@ -366,7 +368,7 @@ int create_name_node(char * pszName)
 
 	if(!p)
 	{
-		printf("创建结点失败\n");
+		printf("malloc failed\n");
 
 		return 0;
 	}
@@ -409,7 +411,7 @@ int create_bound_node(char * pszName)
 
 	if(!p)
 	{
-		printf("创建结点失败\n");
+		printf("malloc failed\n");
 
 		return 0;
 	}
@@ -445,7 +447,7 @@ int create_int_const_node(int nVal)
 
 	if(!p)
 	{
-		printf("创建结点失败\n");
+		printf("malloc failed\n");
 
 		return 0;
 	}
@@ -471,7 +473,7 @@ int create_float_const_node(double fVal)
 
 	if(!p)
 	{
-		printf("创建结点失败\n");
+		printf("malloc failed\n");
 
 		return 0;
 	}
@@ -497,7 +499,7 @@ int create_string_const_node(char * strVal)
 
 	if(!p)
 	{
-		printf("创建结点失败\n");
+		printf("malloc failed\n");
 
 		return 0;
 	}
@@ -545,7 +547,7 @@ int create_operator_node(char * strOperator)
 
 	if(!p)
 	{
-		printf("创建结点失败\n");
+		printf("malloc failed\n");
 
 		return 0;
 	}
@@ -567,4 +569,8 @@ int create_operator_node(char * strOperator)
 	return 1;	
 }
 
-
+int yywrap(void)
+{
+  printf("done\n");
+  return 0;
+}

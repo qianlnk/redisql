@@ -7,7 +7,8 @@
 //int yydebug = 1;
 
 struct stnode * create_non_terminal_node(char * pszName);
-
+extern int yylex(void);
+void yyerror(const char *s);
 %}
 
 %union{
@@ -269,6 +270,7 @@ sql: base_table_def
 	}
 	|select_statement
 	{
+		printf("select_statement start \n");
 		struct stnode * p = create_non_terminal_node("sql");
 
 		if(!p)
@@ -2145,7 +2147,7 @@ drop_table_statement:
 	;
 
 %%
-
+#include "lex.yy.c"
 //创建非终端结点
 
 struct stnode * create_non_terminal_node(char * pszName)
@@ -2161,7 +2163,7 @@ struct stnode * create_non_terminal_node(char * pszName)
 
 	if(!p)
 	{
-		printf("创建结点失败\n");
+		printf("malloc failed\n");
 
 		return NULL;
 	}
@@ -2183,29 +2185,27 @@ struct stnode * create_non_terminal_node(char * pszName)
 	return p;
 }
 
-yyerror(char * s)
+void yyerror(const char * s)
 {
 	printf("%s\n", s);
 }
-
-typedef YY_BUFFER_STATE;
 
 int sql_parse(const char * sql)
 {
 	if(!sql)
 	{
-		printf("没有输入SQL语句\n");
+		printf("sql is null\n");
 	}
-
+        printf("sql = %s\n", sql);
 	int len = strlen(sql);
-
-	YY_BUFFER_STATE state = yy_scan_bytes(sql, len);
-
+       printf("2\n");
+	YY_BUFFER_STATE state = yy_scan_string(sql);
+        printf("3\n");
 	yy_switch_to_buffer(state);
-
+        printf("4\n");
 	int n = yyparse();
-
+        printf("5\n");
 	yy_delete_buffer(state);
-
+        printf("6\n");
 	return n;
 }
