@@ -13,4 +13,4 @@ y.tab.c y.tab.h:sql_syntax.y lex.yy.c
 lex.yy.c:sql_scan.l
 	flex sql_scan.l
 clean:
-	rm lex.yy.c y.tab.h y.tab.c redisql_parse.o y.tab.o syntaxtree.o sql_parse y.output
+	rm lex.yy.c y.tab.h y.tab.c redisql_parse.o y.tab.o syntaxtree.o sql_parse y.output *.a
