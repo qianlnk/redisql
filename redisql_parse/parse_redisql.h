@@ -10,18 +10,6 @@ extern "C" {
 
 int redisql_parse(const char * sql);
 
-enum eNodeType {
-	KEYWORD = 0,
-	ID,
-	OPERATOR,
-	INT_C,		//int float date all count as number
-	FLOAT_C,
-	DATE_C,
-	STRING_C,
-	BRANCH,
-	BOUND_SYM
-};
-
 enum eActionType {
 	REDISQL_USE = 0,			//use databasename;
 	REDISQL_SHOW_DATABASES,		//show databases; 
@@ -41,32 +29,48 @@ enum eActionType {
 	REDISQL_HELP				//help
 };
 
-//parse as an node every word.
-typedef struct tag_stNode{
-	int nType;		//enum eNodeType
-	char *pcName;	//name
+//field type node
+typedef struct tag_FieldType{
+	char *pcField;
+	char *pcType;
+	struct tag_FieldType *pstNextField;
+}FieldType;
+
+//field value node
+typedef struct tag_FieldValue{
+	char *pcField;
 	union{
-		int nVal;
-		char *pcVal;
-		double fVal;
-	}uVal;
-	struct tag_stNode *pstChild;
-	struct tag_stNode *pstBrother;
-}stNode;
+		int nValue;
+		char *pcValue;
+		double fValue;
+	}uValue;
+	struct tag_FieldValue *pstNextField;
+}FieldValue;
+
+//limit
+typedef struct tag_Limit{
+	int nStart;
+	int nEnd;
+}Limit;
+
+//parse sql as a struct
+typedef struct tag_SqlNode{
+	int nType;
+	char *pcName;				//databasename, tablename, indexname
+	FieldType *pstFieldType;
+	FieldValue *pstFieldValue;
+	char *pcWhere;
+	int nTop;
+	Limit stLimit;
+}SqlNode;
 
 //golble list
-extern stNode *gpstTree;
-//golble action type
-extern enum eActionType geAction;
+extern SqlNode g_stSql;
 
-//malloc
-stNode * mallocNode();
 //free
-void freeNode(stNode *pst);
+void freeSqlNode();
 //destory tree
-void destoryTree(stNode *pstTree);
-//add node
-int appendNode(stNode *pstParent, stNode *pstChild);
+void destorySqlNode();
 
 #ifdef __CPLUSPLUS
 }
