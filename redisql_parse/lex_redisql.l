@@ -1,9 +1,10 @@
 %{
 #include <stdio.h>
 #include <stdlib.h>
+#include "y.tab.h"
 #include "parse_redisql.h"
 #define DEBUG 1
-int createKeywordNode(char *pcKeywordName);
+
 %}
 
 digit ([0-9])
@@ -12,46 +13,181 @@ integer ({digit}+)
 
 %%
 
-//keyword regular
 USE |
 use {
-
+	printf("lex use %s\n", yytext);
+	return USE;
 }
+
+SHOW |
+show {
+	return SHOW;
+}
+
+DATABASES |
+databases {
+	return DATABASES;
+}
+
+TABLES |
+tables {
+	return TABLES;
+}
+
+INDEX |
+index {
+	return INDEX;
+}
+
+FROM |
+from {
+	return FROM;
+}
+
+DESC |
+desc {
+	return DESC;
+}
+
+CREATE |
+create {
+	return CREATE;
+}
+
+DATABASE |
+database {
+	return DATABASE;
+}
+
+TABLE |
+table {
+	return TABLE;
+}
+
+NUMBER |
+number {
+	return NUMBER;
+}
+
+STRING |
+string {
+	return STRING;
+}
+
+DATE |
+date {
+	return DATE;
+}
+
+ON |
+on {
+	return ON;
+}
+
+INSERT |
+insert {
+	return INSERT;
+}
+
+INTO |
+into {
+	return INTO;
+}
+
+VALUES |
+values {
+	return VALUES;
+}
+
+SELECT |
+select {
+	return SELECT;
+}
+
+WHERE |
+where {
+	return WHERE;
+}
+
+AND |
+and {
+	return AND;
+}
+
+OR |
+or {
+	return OR;
+}
+
+LIKE |
+like {
+	return LIKE;
+}
+
+TOP |
+top {
+	return TOP;
+}
+
+LIMIT |
+limit {
+	return LIMIT;
+}
+
+[a-zA-Z][a-zA-Z0-9_]* {
+	printf("lex name %s\n", yytext);
+	yylval.strVal = strdup(yytext);
+	return NAME;
+}
+
+[0-9]+ {	
+		yylval.nVal = atoi(yytext);
+		return INTVAL;
+	}
+
+[0-9]+"."[0-9]* {
+		yylval.fVal = atof(yytext);
+		return FLOATVAL;
+	}
+
+'[^'\n]*' {
+		yylval.strVal = strdup(yytext);
+		return STRINGVAL;		
+	}
+
+[ \t\r\n]+ {
+		/*empty*/;
+	}
+
+
+[;] {	
+		return yytext[0];
+	}
+
+[(),.] {
+		return yytext[0];
+	}
+
+"=" |
+"<>" |
+"<" |
+">" |
+"<=" |
+">=" {
+		return COMPARISON;		
+	}
+
+"+" |
+"-" |
+"*" |
+"/"	{
+		return yytext[0];		
+	}
 
 %%
 
-int createKeywordNode(char *pcKeywordName)
+int yywrap(void)
 {
-	stNode *pstNewNode = NULL;
-	char *pcName = NULL;
-
-	#if DEBUG
-		printf("createKeywordNode: yytext = %s\n", yytext);
-	#endif
-
-	if (NULL == pcKeywordName)
-	{
-		printf("createKeywordNode: pcKeywordName is null.\n");
-		return 1;
-	}
-
-	pstNewNode = mallocNode();
-	if (NULL == pstNewNode) 
-	{
-		printf("createKeywordNode: malloc node failed.\n");
-	}
-
-	pcName = (char *)malloc(strlen(pcKeywordName) + 1);
-	if (NULL == pcName)
-	{
-		printf("createKeywordNode: malloc string failed.\n");
-	}
-
-	strcpy(pcName, pcKeywordName);
-
-	pstNewNode->nType = KEYWORD;
-	pstNewNode->pcName = pcName;
-
-
+  printf("done\n");
+  return 1;
 }
-
