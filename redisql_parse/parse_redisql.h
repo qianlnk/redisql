@@ -35,7 +35,8 @@ enum eActionType {
 	REDISQL_DROP_DATABASE,		//drop database databasename
 	REDISQL_DROP_TABLE, 		//drop table tablename
 	REDISQL_EXIT,				//exit
-	REDISQL_HELP				//help
+	REDISQL_HELP,				//help
+	REDISQL_EMPTY
 };
 
 //field type node
@@ -55,7 +56,6 @@ union Value{
 //field value node
 typedef struct tag_FieldValue{
 	int nFieldType;
-	char *pcField;
 	union Value uValue;
 	struct tag_FieldValue *pstNextField;
 }FieldValue;
@@ -97,12 +97,13 @@ typedef struct tag_SqlNode{
 //golble list
 extern SqlNode g_stSql;
 
+void init();
 void setType(int nType);
 int setDatabaseName(const char * pcDatabaseName);
 int setTableName(const char * pcTableName);
 int setIndexName(const char * pcIndexName);
 int addFieldType(const char * pcField, const char * pcType);
-int addFieldValue(int nFieldType, const char * pcField, union Value uValue);
+int addFieldValue(int nFieldType, union Value uValue);
 int addFieldAlias(const char * pcTableAlias, const char * pcField, const char * pcAlias);
 int addTableAlias(const char * pcTable, const char * pcAlias);
 int setWhere(const char * pcWhere);

@@ -104,6 +104,11 @@ select {
 	return SELECT;
 }
 
+AS |
+as {
+	return AS;
+}
+
 WHERE |
 where {
 	return WHERE;
@@ -111,11 +116,13 @@ where {
 
 AND |
 and {
+	printf("lex and %s\n", yytext);
 	return AND;
 }
 
 OR |
 or {
+	printf("lex or %s\n", yytext);
 	return OR;
 }
 
@@ -141,16 +148,19 @@ limit {
 }
 
 [0-9]+ {	
+	printf("lex intval %s\n", yytext);
 		yylval.nVal = atoi(yytext);
 		return INTVAL;
 	}
 
 [0-9]+"."[0-9]* {
+	printf("lex floatval %s\n", yytext);
 		yylval.fVal = atof(yytext);
 		return FLOATVAL;
 	}
 
 '[^'\n]*' {
+	printf("lex stringval %s\n", yytext);
 		yylval.strVal = strdup(yytext);
 		return STRINGVAL;		
 	}
@@ -174,6 +184,7 @@ limit {
 ">" |
 "<=" |
 ">=" {
+		yylval.strVal = strdup(yytext);
 		return COMPARISON;		
 	}
 

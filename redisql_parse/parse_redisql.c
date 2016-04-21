@@ -6,6 +6,20 @@
 //golble list
 SqlNode g_stSql;
 
+void init()
+{
+	g_stSql.nType = REDISQL_EMPTY;
+	g_stSql.pcDatabaseName = NULL;
+	g_stSql.pcTableName = NULL;
+	g_stSql.pcIndexName = NULL;
+	g_stSql.pstFieldType = NULL;
+	g_stSql.pstFieldValue = NULL;
+	g_stSql.pstFieldAlias = NULL;
+	g_stSql.pstFrom = NULL;
+	g_stSql.pcWhere = NULL;
+	g_stSql.nTop = 0;
+}
+
 void setType(int nType)
 {
 	g_stSql.nType = nType;
@@ -108,11 +122,10 @@ int addFieldType(const char * pcField, const char * pcType)
 	return 0;
 }
 
-int addFieldValue(int nFieldType, const char * pcField, union Value uValue)
+int addFieldValue(int nFieldType, union Value uValue)
 {
 	FieldValue * pstTmpFieldValue = NULL;
 	FieldValue * pstTmp = NULL;
-	int nLenField = 0;
 
 	pstTmpFieldValue = mallocFieldValue();
 	if (NULL == pstTmpFieldValue)
@@ -121,14 +134,7 @@ int addFieldValue(int nFieldType, const char * pcField, union Value uValue)
 	}
 
 	pstTmpFieldValue->nFieldType = nFieldType;
-
-	pstTmpFieldValue->pcField = (char *)malloc(nLenField);
-	if (NULL == pstTmpFieldValue->pcField)
-	{
-		destoryFieldValue(pstTmpFieldValue);
-		return MALLOC_ERR;
-	}
-	strcpy(pstTmpFieldValue->pcField, pcField);
+	
 	if (nFieldType == REDISQL_INT)
 	{
 		pstTmpFieldValue->uValue.nValue = uValue.nValue;
@@ -149,8 +155,9 @@ int addFieldValue(int nFieldType, const char * pcField, union Value uValue)
 	{
 		pstTmpFieldValue->uValue.fValue = uValue.fValue;
 	}
-	else{
-			return TYPE_ERR;
+	else
+	{
+		return TYPE_ERR;
 	}
 
 	if (NULL == g_stSql.pstFieldValue)
@@ -360,19 +367,17 @@ void destoryFieldType(FieldType *pst)
 	if (NULL != pst->pcField)
 	{
 		free(pst->pcField);
+		pst->pcField = NULL;
 	}
 
 	if (NULL != pst->pcType)
 	{
 		free(pst->pcType);
-	}
-
-	if (NULL != pst->pstNextField)
-	{
-		free(pst->pstNextField);
+		pst->pcType = NULL;
 	}
 
 	free(pst);
+	pst = NULL;
 }
 
 void destoryFieldValue(FieldValue *pst)
@@ -382,25 +387,17 @@ void destoryFieldValue(FieldValue *pst)
 		return;
 	}
 
-	if (NULL != pst->pcField)
-	{
-		return;
-	}
-
 	if (pst->nFieldType == REDISQL_STRING)
 	{
 		if (NULL != pst->uValue.pcValue)
 		{
 			free(pst->uValue.pcValue);
+			pst->uValue.pcValue = NULL;
 		}
 	}
 
-	if (NULL != pst->pstNextField)
-	{
-		free(pst->pstNextField);
-	}
-
 	free(pst);
+	pst = NULL;
 }
 
 void destoryFieldAlias(FieldAlias *pst)
@@ -413,24 +410,23 @@ void destoryFieldAlias(FieldAlias *pst)
 	if (NULL != pst->pcTableAlias)
 	{
 		free(pst->pcTableAlias);
+		pst->pcTableAlias = NULL;
 	}
 
 	if (NULL != pst->pcField)
 	{
 		free(pst->pcField);
+		pst->pcField = NULL;
 	}
 
 	if (NULL != pst->pcAlias)
 	{
 		free(pst->pcAlias);
-	}
-
-	if (NULL != pst->pstNextField)
-	{
-		free(pst->pstNextField);
+		pst->pcAlias = NULL;
 	}
 
 	free(pst);
+	pst = NULL;
 }
 
 void destoryTableAlias(TableAlias *pst)
@@ -443,16 +439,13 @@ void destoryTableAlias(TableAlias *pst)
 	if (NULL != pst->pcTable)
 	{
 		free(pst->pcTable);
+		pst->pcTable = NULL;
 	}
 
 	if (NULL != pst->pcAlias)
 	{
 		free(pst->pcAlias);
-	}
-
-	if (NULL != pst->pstNextTable)
-	{
-		free(pst->pstNextTable);
+		pst->pcAlias = NULL;
 	}
 
 	free(pst);
@@ -472,16 +465,19 @@ void destorySqlNode()
 	if (NULL != g_stSql.pcDatabaseName)
 	{
 		free(g_stSql.pcDatabaseName);
+		g_stSql.pcDatabaseName = NULL;
 	}
 
 	if (NULL != g_stSql.pcTableName)
 	{
 		free(g_stSql.pcTableName);
+		g_stSql.pcTableName = NULL;
 	}
 
 	if (NULL != g_stSql.pcIndexName)
 	{
 		free(g_stSql.pcIndexName);
+		g_stSql.pcIndexName = NULL;
 	}
 
 	pstTmpFieldType = g_stSql.pstFieldType;
@@ -519,41 +515,43 @@ void destorySqlNode()
 	if (NULL != g_stSql.pcWhere)
 	{
 		free(g_stSql.pcWhere);
+		g_stSql.pcWhere = NULL;
 	}
 }
 
 void showSql()
 {
+	printf("parse resault> ");
 	switch(g_stSql.nType)
 	{
 		case REDISQL_USE:
 		{
-			printf("USE %s\n", g_stSql.pcDatabaseName);
+			printf("USE %s;\n", g_stSql.pcDatabaseName);
 			break;
 		}
 		case REDISQL_SHOW_DATABASES:
 		{
-			printf("SHOW DATABASES\n");
+			printf("SHOW DATABASES;\n");
 			break;
 		}
 		case REDISQL_SHOW_TABLES:
 		{
-			printf("SHOW TABLES\n");
+			printf("SHOW TABLES;\n");
 			break;
 		}
 		case REDISQL_SHOW_INDEX:
 		{
-			printf("SHOW INDEX FROM %s\n", g_stSql.pcTableName);
+			printf("SHOW INDEX FROM %s;\n", g_stSql.pcTableName);
 			break;
 		}
 		case REDISQL_DESC:
 		{
-			printf("DESC %s\n", g_stSql.pcTableName);
+			printf("DESC %s;\n", g_stSql.pcTableName);
 			break;
 		}
 		case REDISQL_CREATE_DATABASE:
 		{
-			printf("CREATE DATABASE %s\n", g_stSql.pcDatabaseName);
+			printf("CREATE DATABASE %s;\n", g_stSql.pcDatabaseName);
 			break;
 		}
 		case REDISQL_CREATE_TABLE:
@@ -570,7 +568,7 @@ void showSql()
 					printf(", ");
 				}
 			}
-			printf(")\n");
+			printf(");\n");
 			break;
 		} 
 		case REDISQL_CREATE_INDEX:
@@ -587,11 +585,47 @@ void showSql()
 					printf(", ");
 				}
 			}
-			printf(")\n");
+			printf(");\n");
 			break;
 		}
 		case REDISQL_INSERT:
 		{
+			FieldType *pstType = NULL;
+			FieldValue *pstValue = NULL;
+			printf("INSERT INTO %s(", g_stSql.pcTableName);
+			pstType = g_stSql.pstFieldType;
+			while(pstType)
+			{
+				printf("%s", pstType->pcField);
+				pstType = pstType->pstNextField;
+				if (NULL != pstType)
+				{
+					printf(", ");
+				}
+			}
+			printf(") VALUES(");
+			pstValue = g_stSql.pstFieldValue;
+			while(pstValue)
+			{
+				if (pstValue->nFieldType == REDISQL_INT)
+				{
+					printf("%d", pstValue->uValue.nValue);
+				}
+				else if(pstValue->nFieldType == REDISQL_FLOAT)
+				{
+					printf("%f", pstValue->uValue.fValue);
+				}
+				else
+				{
+					printf("%s", pstValue->uValue.pcValue);
+				}
+				pstValue = pstValue->pstNextField;
+				if (NULL != pstValue)
+				{
+					printf(", ");
+				}
+			}
+			printf(");\n");
 			break;
 		}
 		case REDISQL_SELECT:
@@ -616,15 +650,22 @@ void showSql()
 		}
 		case REDISQL_EXIT:
 		{
+			printf("EXIT\n");
 			break;
 		}
 		case REDISQL_HELP:
 		{
+			printf("HELP\n");
+			break;
+		}
+		case REDISQL_EMPTY:
+		{
+			printf("\n");
 			break;
 		}
 		default:
 		{
-			printf("err type.");
+			printf("err type.\n");
 		}
 	}
 }

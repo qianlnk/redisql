@@ -4,9 +4,14 @@
 
 int main()
 {
-	char *sql = "show index from student;";
-	redisql_parse(sql);
-	showSql();
-	destorySqlNode();
+	char sql[1000];
+	while(1)
+	{
+		printf("redisql> ");
+		gets(sql);
+		redisql_parse(sql);
+		showSql();
+		destorySqlNode();
+	}
 	return 0;
 }
