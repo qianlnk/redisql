@@ -9,75 +9,148 @@ void yyerror(const char *s);
 %}
 
 %union{
+	char *key;
 	char *strVal;
 	int nVal;
 	double fVal;
 }
 
-%token <strVal> USE SHOW DATABASES TABLES INDEX FROM DESC CREATE DATABASE TABLE NUMBER STRING DATE ON INSERT INTO VALUES SELECT AS WHERE AND OR LIKE TOP LIMIT HELP EXIT
+%token <key> USE SHOW DATABASES TABLES INDEX FROM DESC CREATE DATABASE TABLE NUMBER STRING DATE ON INSERT INTO VALUES SELECT AS WHERE AND OR LIKE TOP LIMIT HELP EXIT
 %token <strVal> NAME STRINGVAL COMPARISON '(' ')' ',' '.' '+' '-' '*' '/' ';'
 %token <nVal> INTVAL
 %token <fVal> FLOATVAL
-%type <strVal> use_database database_name table_name semicolon_empty conlumn_def_list  conlumn_name conlumn_type index_name value_list select_conlumn_list select_conlumn select_table_list select_table where_condition table_alias conlumn_alias condition bool_term bool_op expression primary
+%type <strVal> conlumn_def_list  conlumn_name conlumn_type index_name value_list select_conlumn_list select_conlumn select_table_list select_table where_condition table_alias conlumn_alias condition bool_term bool_op expression primary
+
+%type <strVal> use database_name desc table_name
+%type <strVal> show show_databases show_tables show_index
+%type <strVal> create create_database create_table create_index
+/*%type <strVal> insert_into
+%type <strVal> select
+%type <strVal> drop drop_database drop_table drop_index
+%type <strVal> delete_from
+*/
+%type <strVal> opt_semicolon
 
 %start sql
 
 %%
 sql:
-	use_database
+	use
 	{
 		setType(REDISQL_USE);
 		setDatabaseName($1);
 	}
-	| SHOW DATABASES semicolon_empty
+	| show 
 	{
-		setType(REDISQL_SHOW_DATABASES);
+		//no code
 	}
-	| SHOW TABLES semicolon_empty
-	{
-		setType(REDISQL_SHOW_TABLES);
-	}
-	| SHOW INDEX FROM table_name semicolon_empty
-	{
-		setType(REDISQL_SHOW_INDEX);
-		setTableName($4);
-	}
-	| DESC table_name semicolon_empty
+	| desc
 	{
 		setType(REDISQL_DESC);
-		setTableName($2);
+		setTableName($1);
 	}
-	| CREATE DATABASE database_name semicolon_empty
+	| create
 	{
-		setType(REDISQL_CREATE_DATABASE);
-		setDatabaseName($3);
+		//no code
 	}
-	| CREATE TABLE table_name '(' conlumn_def_list ')' semicolon_empty
-	{
-		setType(REDISQL_CREATE_TABLE);
-		setTableName($3);
-	}
-	| CREATE INDEX index_name ON table_name '(' conlumn_def_list ')' semicolon_empty
-	{
-		setType(REDISQL_CREATE_INDEX);
-		setIndexName($3);
-		setTableName($5);
-	}
-	| INSERT INTO table_name '(' conlumn_def_list ')' VALUES '(' value_list ')' semicolon_empty
+	| INSERT INTO table_name '(' conlumn_def_list ')' VALUES '(' value_list ')' opt_semicolon
 	{
 		setType(REDISQL_INSERT);
 		setTableName($3);
 	}
-	| SELECT select_conlumn_list FROM select_table_list where_condition semicolon_empty
+	| SELECT select_conlumn_list FROM select_table_list where_condition opt_semicolon
 	{
 		setType(REDISQL_SELECT);
 	}
 	;
 
-use_database:
-	USE database_name semicolon_empty
+use:
+	USE database_name opt_semicolon
 	{
 		$$ = $2;
+	}
+	;
+
+show:
+	show_databases
+	{
+		setType(REDISQL_SHOW_DATABASES);
+	}
+	| show_tables
+	{
+		setType(REDISQL_SHOW_TABLES);
+	}
+	| show_index
+	{
+		setType(REDISQL_SHOW_INDEX);
+		setIndexName($1);
+	}
+	;
+
+show_databases:
+	SHOW DATABASES opt_semicolon
+	{
+		$$ = NULL;
+	}
+	;
+
+show_tables:
+	SHOW TABLES opt_semicolon
+	{
+		$$ = NULL;
+	}
+	;
+
+show_index:
+	SHOW INDEX FROM table_name opt_semicolon
+	{
+		$$ = $4;
+	}
+	;
+
+desc:
+	DESC table_name opt_semicolon
+	{
+		$$ = $2;
+	}
+	;
+
+create:
+	create_database
+	{
+		setType(REDISQL_CREATE_DATABASE);
+		setDatabaseName($1);
+	}
+	| create_table
+	{
+		setType(REDISQL_CREATE_TABLE);
+		setTableName($1);
+	}
+	| create_index
+	{
+		setType(REDISQL_CREATE_INDEX);
+	}
+	;
+
+create_database:
+	CREATE DATABASE database_name opt_semicolon
+	{
+		$$ = $3;
+	}
+	;
+
+create_table:
+	CREATE TABLE table_name '(' conlumn_def_list ')' opt_semicolon
+	{
+		$$ = $3;
+	}
+	;
+
+create_index:
+	CREATE INDEX index_name ON table_name '(' conlumn_def_list ')' opt_semicolon
+	{
+		setIndexName($3);
+		setTableName($5);
 	}
 	;
 
@@ -95,14 +168,14 @@ table_name:
 	}
 	;
 
-semicolon_empty:
+opt_semicolon:
 	';'
 	{
 		$$ = $1;
 	}
-	|
+	|/*empty*/
 	{
-
+		$$ = "";
 	}
 	;
 
