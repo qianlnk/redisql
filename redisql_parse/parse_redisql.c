@@ -5,7 +5,7 @@
 
 //golble list
 SqlNode g_stSql;
-
+char acWhere[2048];
 void init()
 {
 	g_stSql.nType = REDISQL_EMPTY;
@@ -18,6 +18,7 @@ void init()
 	g_stSql.pstFrom = NULL;
 	g_stSql.pcWhere = NULL;
 	g_stSql.nTop = 0;
+	memset(acWhere, 0, 2048);
 }
 
 void setType(int nType)

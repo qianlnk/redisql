@@ -64,19 +64,79 @@ table {
 	return TABLE;
 }
 
-NUMBER |
-number {
-	return NUMBER;
+INT |
+int {
+	return INT;
 }
 
-STRING |
-string {
-	return STRING;
+FLOAT |
+float {
+
 }
+
+DOUBLE |
+double {
+	return DOUBLE;
+}
+
+CHAR |
+char {
+	return CHAR;
+} 
+
+VARCHAR |
+varchar {
+	return VARCHAR;
+}
+
+TEXT |
+text {
+	return TEXT;
+} 
 
 DATE |
 date {
 	return DATE;
+} 
+
+DATETIME |
+datetime {
+	return DATETIME;
+} 
+
+NOT |
+not {
+	return NOT;
+}
+
+NULL |
+null {
+	return TOKEN_NULL;
+}
+
+UNIQUE |
+unique {
+	return UNIQUE;
+} 
+
+PRIMARY |
+primary {
+	return PRIMARY;
+} 
+
+KEY |
+key {
+	return KEY;
+} 
+
+DEFAULT |
+default {
+	return DEFAULT;
+} 
+
+AUTO_INCREMENT |
+auto_increment {
+	return AUTO_INCREMENT;
 }
 
 ON |
@@ -104,6 +164,81 @@ select {
 	return SELECT;
 }
 
+DISTINCT |
+distinct {
+	return DISTINCT;
+}
+
+COUNT |
+count {
+	return COUNT;
+}
+
+SUM |
+sum {
+	return SUM;
+}
+
+AVG |
+avg {
+	return AVG;
+}
+
+MIN |
+min {
+	return MIN;
+}
+
+MAX |
+max {
+	return MAX;
+}
+
+JOIN |
+join {
+	return JOIN;
+}
+
+CROSS |
+cross {
+	return CROSS;
+}
+
+INNER |
+inner {
+	return INNER;
+}
+
+LEFT |
+left {
+	return LEFT;
+}
+
+RIGHT |
+right {
+	return RIGHT;
+}
+
+CONCAT |
+concat {
+	return CONCAT;
+}
+
+FULL |
+full {
+	return FULL;
+}
+
+NATURAL |
+natural {
+	return NATURAL;
+}
+
+OUTER |
+outer {
+	return OUTER;
+}
+
 AS |
 as {
 	return AS;
@@ -128,7 +263,8 @@ or {
 
 LIKE |
 like {
-	return LIKE;
+	yylval.strVal = strdup(yytext);
+	return COMPARISON;
 }
 
 TOP |

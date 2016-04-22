@@ -96,6 +96,7 @@ typedef struct tag_SqlNode{
 
 //golble list
 extern SqlNode g_stSql;
+extern char acWhere[2048];
 
 void init();
 void setType(int nType);
