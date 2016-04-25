@@ -85,10 +85,14 @@ typedef struct tag_SqlNode{
 	char *pcDatabaseName;		//database name
 	char *pcTableName;			//table name
 	char *pcIndexName;			//index name
-	FieldType *pstFieldType;	//create table's fields and types
+	int nFieldTypeNum;			//
+	FieldType *pstFieldType;		//create table's fields and types
+	int nFieldValueNum;
 	FieldValue *pstFieldValue;	//insert
+	int nFieldAliasNum;
 	FieldAlias *pstFieldAlias;	//select
-	TableAlias *pstFrom;		//select from
+	int nTableAliasNum;
+	TableAlias *pstFrom;			//select from
 	char *pcWhere;				//parse every word split with " ".
 	int nTop;					//select top
 	Limit stLimit;				//select limit
@@ -96,7 +100,6 @@ typedef struct tag_SqlNode{
 
 //golble list
 extern SqlNode g_stSql;
-extern char acWhere[2048];
 
 void init();
 void setType(int nType);
@@ -110,6 +113,18 @@ int addTableAlias(const char * pcTable, const char * pcAlias);
 int setWhere(const char * pcWhere);
 void setTop(int nTop);
 void setLimit(int nStart, int nEnd);
+
+int getType();
+char * getDatabaseName();
+char * getTableName();
+char * getIndexName();
+char * getFieldType(int sn);	//field and type slpit with " "
+char * getFieldValue(int sn);
+char * getFieldAlias(int sn);
+char * getTableAlias(int sn);
+char * getWhere();
+int getTop();
+char * getLimit();
 
 FieldType * mallocFieldType();
 FieldValue * mallocFieldValue();

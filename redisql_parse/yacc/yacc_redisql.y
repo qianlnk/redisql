@@ -42,7 +42,7 @@ void yyerror(const char *s);
 %type <strColumn> column_name_type_list column_name_type column_name column_type opt_column_name_list column_name_list opt_constraint_list constraint_list constraint
 %type <strVal> value_list value
 %type <strIndex> index_name
-%type <strVal> opt_semicolon opt_distinct expression_list opt_alias column_name_or_star  function_name table_list table_def default_join join opt_outer opt_join_condition join_condition condition
+%type <strVal> opt_semicolon opt_distinct expression_list opt_alias column_name_or_star  function_name table_list table_def default_join join opt_outer opt_join_condition join_condition condition opt_top opt_limit
 %type <stFieldAlias> column_reference expression mulexp primary term  
 
 %start sql
@@ -96,7 +96,7 @@ show:
 	| show_index
 	{
 		setType(REDISQL_SHOW_INDEX);
-		setIndexName($1);
+		setTableName($1);
 	}
 	;
 
@@ -312,7 +312,7 @@ value:
 	;
 
 select:
-	SELECT opt_distinct expression_list FROM table_list opt_where_condition opt_semicolon
+	SELECT opt_distinct expression_list FROM table_list opt_where_condition opt_top opt_limit opt_semicolon
 	{
 		setType(REDISQL_SELECT);
 	}
@@ -325,15 +325,12 @@ opt_distinct:
 expression_list:
 	expression opt_alias
 	{
-	printf("a\n");
 		FieldAlias st;
 		st = $1;
-		printf("st %s %s %s\n", st.pcTableAlias, st.pcField, $2);
 		addFieldAlias(st.pcTableAlias, st.pcField, $2);
 	}
 	| expression_list ',' expression opt_alias
 	{
-	printf("b\n");
 		FieldAlias st;
 		st = $3;
 		addFieldAlias(st.pcTableAlias, st.pcField, $4);
@@ -360,7 +357,6 @@ expression:
 	| expression '-' mulexp
 	| mulexp
 	{
-	printf("c\n");
 		$$ = $1;
 	}
 	;
@@ -374,7 +370,6 @@ mulexp:
 	{}
 	| primary 					
 	{ 
-	printf("d\n");
 		$$ = $1; 
 	}
 	;
@@ -382,7 +377,6 @@ mulexp:
 primary:
 	'(' expression ')' 	
 	{ 
-	printf("e\n");
 		$$ = $2; 
 	}
 	| '-' primary 
@@ -391,7 +385,6 @@ primary:
 	}
 	| term 
 	{ 
-	printf("f\n");
 		$$ = $1; 
 	} 
 	;
@@ -399,8 +392,8 @@ primary:
 term: 
 	value
 	{
-		printf("value:%s\n", $1);
 		FieldAlias st;
+		st.pcTableAlias = NULL;
 		st.pcField = $1;
 		$$ = st;
 	}
@@ -410,9 +403,7 @@ term:
 	}
 	| column_reference
 	{
-		printf("column_reference\n");
 		$$ = $1;
-		printf("column_reference end\n");
 	}
 	| function_name '(' expression ')'
 	{
@@ -423,7 +414,6 @@ term:
 column_reference:
 	column_name_or_star
 	{
-	printf("g\n");
 		FieldAlias stTmp;
 		stTmp.pcTableAlias = "";
 		stTmp.pcField = $1;
@@ -432,7 +422,6 @@ column_reference:
 	}
 	| table_name '.' column_name_or_star
 	{
-	printf("h\n");
 		FieldAlias stTmp;
 		stTmp.pcTableAlias = $1;
 		stTmp.pcField = $3;
@@ -555,7 +544,7 @@ opt_semicolon:
 opt_where_condition:
 	WHERE condition
 	{
-		printf("f %s\n", acWhere);
+		setWhere($2);
 	}
 	| 
 	{
@@ -565,32 +554,24 @@ opt_where_condition:
 condition: 
 	bool_term 
 	{ 
-		printf("bool_term %s\n", $1);
-		if (acWhere[0] == '\0')
-		{
-			strcat(acWhere, $1);
-		}
 		$$ = $1;
 	}
 	| condition bool_op bool_term
    	{ 
-   		//printf("bool_term bool_op condition  %s %s %s\n", $1, $2, $3);
-   		char pc[1000];
+   		char *pc = (char *)malloc(1000);
+   		memset(pc, '\0', 1000);
    		sprintf(pc, "%s %s %s", $1, $2, $3);
-   		strcat(acWhere, " ");
-   		strcat(acWhere, $2);
-   		strcat(acWhere, " ");
-   		strcat(acWhere, $3);
    		$$ = pc;
-   	}
+   	}	
+
 	;
 
 bool_term: 
 	expression COMPARISON expression 
    	{
-   		printf("123\n");
    		FieldAlias st1, st3;
-   		char pc[1000] = {'\0'};
+   		char *pc = (char *)malloc(1000);
+   		memset(pc, '\0', 1000);
    		st1 = $1;
    		st3 = $3;
    		if (strcmp(st1.pcTableAlias, "") != 0)
@@ -602,22 +583,24 @@ bool_term:
    		strcat(pc, " ");
    		strcat(pc, $2);
    		strcat(pc, " ");
+   		if (st3.pcTableAlias != NULL)
+   		{
+	   		if (strcmp(st3.pcTableAlias, "") != 0)
+	   		{
+	   			strcat(pc, st3.pcTableAlias);
+	   			strcat(pc, ".");
+	   		}
+   		}
    		strcat(pc, st3.pcField);
-   		printf("123 end %s\n", pc);
    		$$ = pc;
    	}
-   	| '(' condition ')' 	
-	{ 
-		printf("456 start %s\n", $2);
-		char pc[1000] = {'\0'};
-		strcat(pc, "(");
-   		strcat(pc, " ");
-   		strcat(pc, $2);
-   		strcat(pc, " ");
-   		strcat(pc, ")");
-   		printf("456 end %s\n", pc);
+   	| '(' condition ')'
+   	{
+   		char *pc = (char *)malloc(1000);
+   		memset(pc, '\0', 1000);
+   		sprintf(pc, "( %s )", $2);
    		$$ = pc;
-	}
+   	}
 	;
 
 bool_op
@@ -625,7 +608,23 @@ bool_op
 	| OR { $$ = "OR"; }
 	;
 
+opt_top:
+	TOP INTVAL
+	{
+		setTop($2);
+	}
+	|/*empty*/
+	{}
+	;
 
+opt_limit:
+	LIMIT INTVAL ',' INTVAL
+	{
+		setLimit($2, $4);
+	}
+	|/*empty*/
+	{}
+	;
 
 %%
 #include "lex.yy.c"
@@ -641,16 +640,14 @@ int redisql_parse(const char * sql)
 	{
 		printf("sql is null\n");
 	}
-        printf("sql = %s\n", sql);
+	if (strcmp(sql, "") == 0)
+	{
+		return 0;
+	}
 	int len = strlen(sql);
-       printf("2\n");
 	YY_BUFFER_STATE state = yy_scan_string(sql);
-        printf("3\n");
 	yy_switch_to_buffer(state);
-        printf("4\n");
 	int n = yyparse();
-        printf("5\n");
 	yy_delete_buffer(state);
-        printf("6\n");
 	return n;
 }

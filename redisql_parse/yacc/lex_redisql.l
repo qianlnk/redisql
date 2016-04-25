@@ -251,19 +251,17 @@ where {
 
 AND |
 and {
-	printf("lex and %s\n", yytext);
 	return AND;
 }
 
 OR |
 or {
-	printf("lex or %s\n", yytext);
 	return OR;
 }
 
 LIKE |
 like {
-	yylval.strVal = strdup(yytext);
+	yylval.strVal = strdup("LIKE");
 	return COMPARISON;
 }
 
@@ -278,25 +276,21 @@ limit {
 }
 
 [a-zA-Z][a-zA-Z0-9_]* {
-	printf("lex name %s\n", yytext);
 	yylval.strVal = strdup(yytext);
 	return NAME;
 }
 
 [0-9]+ {	
-	printf("lex intval %s\n", yytext);
 		yylval.nVal = atoi(yytext);
 		return INTVAL;
 	}
 
 [0-9]+"."[0-9]* {
-	printf("lex floatval %s\n", yytext);
 		yylval.fVal = atof(yytext);
 		return FLOATVAL;
 	}
 
 '[^'\n]*' {
-	printf("lex stringval %s\n", yytext);
 		yylval.strVal = strdup(yytext);
 		return STRINGVAL;		
 	}
