@@ -457,6 +457,7 @@ void destoryTableAlias(TableAlias *pst)
 	}
 
 	free(pst);
+	pst = NULL;
 }
 
 void destorySqlNode()
@@ -529,7 +530,7 @@ void destorySqlNode()
 
 void showSql()
 {
-	//printf("parse resault> ");
+	printf("num: %d %d %d %d\n", g_stSql.nFieldTypeNum, g_stSql.nFieldValueNum, g_stSql.nFieldAliasNum, g_stSql.nTableAliasNum);
 	switch(g_stSql.nType)
 	{
 		case REDISQL_USE:
@@ -737,7 +738,6 @@ void showSql()
 
 int getType()
 {
-	printf("g_stSql.nType = %d\n", g_stSql.nType);
 	return g_stSql.nType;
 }
 
@@ -754,6 +754,26 @@ char * getTableName()
 char * getIndexName()
 {
 	return g_stSql.pcIndexName;
+}
+
+int getFieldTypeNum()
+{
+	return g_stSql.nFieldTypeNum;
+}
+
+int getFieldValueNum()
+{
+	return g_stSql.nFieldValueNum;
+}
+
+int getFieldAliasNum()
+{
+	return g_stSql.nFieldAliasNum;
+}
+
+int getTableAliasNum()
+{
+	return g_stSql.nTableAliasNum;
 }
 
 char * getFieldType(int sn)	//field and type slpit with " "
@@ -773,27 +793,113 @@ char * getFieldType(int sn)	//field and type slpit with " "
 	sprintf(pcRes, "%s %s", pstType->pcField, pstType->pcType);
 	return pcRes;	
 }
+
 char * getFieldValue(int sn)
 {
-	return NULL;
+	FieldType *pstType = NULL;
+	FieldValue *pstValue = NULL;
+	int i = 0;
+	int nLen = 0;
+	char * pcRes = NULL;
+	pstType = g_stSql.pstFieldType;
+	pstValue = g_stSql.pstFieldValue;
+	for (i = 0; i < sn; i++)
+	{
+		pstType = pstType->pstNextField;
+		pstValue = pstValue->pstNextField;
+	}
+	switch (pstValue->nFieldType) 
+	{
+		case REDISQL_INT:
+		{
+			char acType[64] = {'\0'};
+			char acValue[64] = {'\0'};
+			sprintf(acType, "%d", pstValue->nFieldType);
+			sprintf(acValue, "%d", pstValue->uValue.nValue);
+			nLen =  strlen(pstType->pcField) + strlen(acType) + strlen(acValue) + 3;
+			pcRes = (char *)malloc(nLen);
+			memset(pcRes, '\0', nLen);
+			sprintf(pcRes, "%d %s %d", pstValue->nFieldType, pstType->pcField, pstValue->uValue.nValue);
+			break;
+		}
+		case REDISQL_FLOAT:
+		{
+			char acType[64] = {'\0'};
+			char acValue[64] = {'\0'};
+			sprintf(acType, "%d", pstValue->nFieldType);
+			sprintf(acValue, "%f", pstValue->uValue.fValue);
+			nLen =  strlen(pstType->pcField) + strlen(acType) + strlen(acValue) + 3;
+			pcRes = (char *)malloc(nLen);
+			memset(pcRes, '\0', nLen);
+			sprintf(pcRes, "%d %s %f", pstValue->nFieldType, pstType->pcField, pstValue->uValue.fValue);
+			break;
+		}
+		case REDISQL_STRING:
+		{
+			char acType[64] = {'\0'};
+			sprintf(acType, "%d", pstValue->nFieldType);
+			nLen =  strlen(pstType->pcField) + strlen(acType) + strlen(pstValue->uValue.pcValue) + 3;
+			pcRes = (char *)malloc(nLen);
+			memset(pcRes, '\0', nLen);
+			sprintf(pcRes, "%d %s %s", pstValue->nFieldType, pstType->pcField, pstValue->uValue.pcValue);
+			break;
+		}
+		default:
+		{
+			break;
+		}
+	}
+	return pcRes;
 }
+
 char * getFieldAlias(int sn)
 {
-	return NULL;
+	FieldAlias *pstField = NULL;
+	int i = 0;
+	int nLen = 0;
+	char * pcRes = NULL;
+	
+	pstField = g_stSql.pstFieldAlias;
+	for (i = 0; i < sn; i++)
+	{
+		pstField = pstField->pstNextField;
+	}
+	
+	nLen = strlen(pstField->pcTableAlias) + strlen(pstField->pcField) + strlen(pstField->pcAlias) + 3;
+	pcRes = (char *)malloc(nLen);
+	sprintf(pcRes, "%s %s %s", pstField->pcTableAlias, pstField->pcField, pstField->pcAlias);
+	return pcRes;
 }
+
 char * getTableAlias(int sn)
 {
-	return NULL;
+	TableAlias *pstTable = NULL;
+	int i = 0;
+	int nLen = 0;
+	char * pcRes = NULL;
+	
+	pstTable = g_stSql.pstFrom;
+	for (i = 0; i < sn; i++)
+	{
+		pstTable = pstTable->pstNextTable;
+	}
+	
+	nLen = strlen(pstTable->pcTable) + strlen(pstTable->pcAlias) + 2;
+	pcRes = (char *)malloc(nLen);
+	sprintf(pcRes, "%s %s", pstTable->pcTable, pstTable->pcAlias);
+	return pcRes;
 }
+
 char * getWhere()
 {
 	return g_stSql.pcWhere;
 }
-int getTop()
 
+int getTop()
 {
 	return g_stSql.nTop;
 }
+
 char * getLimit()
 {
 	char * pcRes = (char *)malloc(1024);

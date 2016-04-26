@@ -118,6 +118,10 @@ int getType();
 char * getDatabaseName();
 char * getTableName();
 char * getIndexName();
+int getFieldTypeNum();	
+int getFieldValueNum();
+int getFieldAliasNum();
+int getTableAliasNum();
 char * getFieldType(int sn);	//field and type slpit with " "
 char * getFieldValue(int sn);
 char * getFieldAlias(int sn);

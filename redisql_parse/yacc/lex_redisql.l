@@ -15,7 +15,6 @@ integer ({digit}+)
 
 USE |
 use {
-	printf("lex use %s\n", yytext);
 	return USE;
 }
 
@@ -329,6 +328,5 @@ limit {
 
 int yywrap(void)
 {
-  printf("done\n");
   return 1;
 }

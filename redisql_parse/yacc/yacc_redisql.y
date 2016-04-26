@@ -327,13 +327,27 @@ expression_list:
 	{
 		FieldAlias st;
 		st = $1;
-		addFieldAlias(st.pcTableAlias, st.pcField, $2);
+		if (strcmp($2, "") != 0)
+		{
+			addFieldAlias(st.pcTableAlias, st.pcField, $2);
+		}
+		else
+		{
+			addFieldAlias(st.pcTableAlias, st.pcField, st.pcField);
+		}
 	}
 	| expression_list ',' expression opt_alias
 	{
 		FieldAlias st;
 		st = $3;
-		addFieldAlias(st.pcTableAlias, st.pcField, $4);
+		if (strcmp($4, "") != 0)
+		{
+			addFieldAlias(st.pcTableAlias, st.pcField, $4);
+		}
+		else
+		{
+			addFieldAlias(st.pcTableAlias, st.pcField, st.pcField);
+		}
 	}
 	;
 
