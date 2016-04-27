@@ -14,6 +14,17 @@ redisql
 * Other Comming soon
 
 ##how to use
+###make
+```golang
+//build parse sql lib 'libparse.so' 
+> cd redisql/redisql_parse/yacc
+> make
+
+//copy 'libparse.so' to redisql_cli or your project
+//build client, need 'libparse.so'.
+> cd redisql/redisql_cli
+> go build
+```
 ###client
 ![](https://github.com/qianlnk/redisql/blob/master/redisql.jpg)
 ###call by golang
