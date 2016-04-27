@@ -114,8 +114,6 @@ func existsTable(tablename string) bool {
 }
 
 func getCount(tablename string) (int, error) {
-	fmt.Println("get " + tablename + " count start...")
-
 	conn := getConn()
 	defer conn.Close()
 
@@ -123,8 +121,6 @@ func getCount(tablename string) (int, error) {
 }
 
 func getNextId(tablename string) (int, error) {
-	fmt.Println("get %s %s last id start...", database, tablename)
-
 	conn := getConn()
 	defer conn.Close()
 
@@ -154,8 +150,6 @@ func getNextConditionSn() (int, error) {
 
 //field opertion
 func existsField(tablename, fieldname string) bool {
-	fmt.Println("exists field:%s start...", fieldname)
-
 	conn := getConn()
 	defer conn.Close()
 
@@ -169,8 +163,6 @@ func existsField(tablename, fieldname string) bool {
 }
 
 func getFieldType(tablename, fieldname string) (string, error) {
-	fmt.Printf("get field %s.%s's type start...\n", tablename, fieldname)
-
 	conn := getConn()
 	defer conn.Close()
 
@@ -179,8 +171,6 @@ func getFieldType(tablename, fieldname string) (string, error) {
 
 //index opertion
 func existsIndex(tablename, indexname string) bool {
-	fmt.Println("exists %s %s index %s start...", database, tablename, indexname)
-
 	conn := getConn()
 	defer conn.Close()
 
@@ -194,7 +184,6 @@ func existsIndex(tablename, indexname string) bool {
 }
 
 func getIndexs(tablename string) (map[string][]string, error) {
-	fmt.Println("get %s %s indexs start...", database, tablename)
 	indexs := make(map[string][]string)
 
 	conn := getConn()
@@ -291,9 +280,9 @@ func Compare(oldsign, newsign string) int {
 		switch newsign {
 		case "(":
 			return REDISQL_PRIORITY_LESS
-		case "and":
+		case "AND":
 			return REDISQL_PRIORITY_LESS
-		case "or":
+		case "OR":
 			return REDISQL_PRIORITY_LESS
 		case "#":
 			return REDISQL_PRIORITY_GREATER
@@ -306,9 +295,9 @@ func Compare(oldsign, newsign string) int {
 			return REDISQL_PRIORITY_LESS
 		case ")":
 			return REDISQL_PRIORITY_EQUAL
-		case "or":
+		case "OR":
 			return REDISQL_PRIORITY_LESS
-		case "and":
+		case "AND":
 			return REDISQL_PRIORITY_LESS
 		default:
 			return REDISQL_PRIORITY_ERROR
@@ -316,19 +305,19 @@ func Compare(oldsign, newsign string) int {
 		break
 	case ")":
 		switch newsign {
-		case "or":
+		case "OR":
 			return REDISQL_PRIORITY_GREATER
-		case "and":
+		case "AND":
 			return REDISQL_PRIORITY_GREATER
 		default:
 			return REDISQL_PRIORITY_ERROR
 		}
 		break
-	case "and":
+	case "AND":
 		switch newsign {
-		case "or":
+		case "OR":
 			return REDISQL_PRIORITY_GREATER
-		case "and":
+		case "AND":
 			return REDISQL_PRIORITY_GREATER
 		case "(":
 			return REDISQL_PRIORITY_LESS
@@ -340,11 +329,11 @@ func Compare(oldsign, newsign string) int {
 			return REDISQL_PRIORITY_ERROR
 		}
 		break
-	case "or":
+	case "OR":
 		switch newsign {
-		case "or":
+		case "OR":
 			return REDISQL_PRIORITY_GREATER
-		case "and":
+		case "AND":
 			return REDISQL_PRIORITY_GREATER
 		case "(":
 			return REDISQL_PRIORITY_LESS

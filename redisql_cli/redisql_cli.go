@@ -19,7 +19,7 @@ const (
 		"Type 'help' or '\\h' for help.\n\n"
 )
 
-func show(fields []string, datas [][]string, usetime float64) {
+func show(fields []string, datas [][]string, parsetime float64, querytime float64) {
 	maxlen := make(map[int]int)
 	for i, data := range datas {
 		for j, dt := range data {
@@ -44,7 +44,7 @@ func show(fields []string, datas [][]string, usetime float64) {
 		line += "+"
 	}
 	if line == "+" {
-		fmt.Printf("Empty set (%-.2f sec)\n\n", usetime)
+		fmt.Printf("Empty set (p: %-.2f sec q: %-.2f sec)\n\n", parsetime, querytime)
 		return
 	}
 	fmt.Println(line)
@@ -66,25 +66,74 @@ func show(fields []string, datas [][]string, usetime float64) {
 		count++
 	}
 	fmt.Println(line)
-	fmt.Printf("%d rows int set (%-.2f sec)\n\n", count, usetime)
+	fmt.Printf("%d rows int set (p: %-.2f sec q: %-.2f sec)\n\n", count, parsetime, querytime)
 }
 
+func printResInfo(res *redisql.QueryRes) {
+	fmt.Printf("%s (p: %.2f sec, q: %.2f sec)\n\n", res.Result, res.ParseTime, res.QueryTime)
+}
 func ui(res *redisql.QueryRes) {
 	switch res.Type {
 	case redisql.REDISQL_USE:
-		fmt.Printf("%s (p: %.2f sec, q: %.2f sec)\n\n", res.Result, res.ParseTime, res.QueryTime)
+		printResInfo(res)
 		break
 	case redisql.REDISQL_SHOW_DATABASES:
 		var fields []string
 		fields = append(fields, "Databases")
-		var datas [][]string
-		dbs := res.Result.([]string)
-		for _, db := range dbs {
-			var tmpdb []string
-			tmpdb = append(tmpdb, db)
-			datas = append(datas, tmpdb)
-		}
-		show(fields, datas, res.ParseTime)
+		show(fields, redisql.ToArray(res.Result), res.ParseTime, res.QueryTime)
+		break
+	case redisql.REDISQL_SHOW_TABLES:
+		var fields []string
+		_, dbname := redisql.GetDbInfo()
+		fields = append(fields, fmt.Sprintf("Tables_in_%s", dbname))
+		show(fields, redisql.ToArray(res.Result), res.ParseTime, res.QueryTime)
+		break
+	case redisql.REDISQL_SHOW_INDEX:
+		var fields []string
+		fields = append(fields, "index_name", "conlumn")
+		show(fields, redisql.ToArray(res.Result), res.ParseTime, res.QueryTime)
+		break
+	case redisql.REDISQL_DESC:
+		var fields []string
+		fields = append(fields, "Field")
+		fields = append(fields, "type")
+		show(fields, redisql.ToArray(res.Result), res.ParseTime, res.QueryTime)
+		break
+	case redisql.REDISQL_CREATE_DATABASE:
+		printResInfo(res)
+		break
+	case redisql.REDISQL_CREATE_TABLE:
+		printResInfo(res)
+		break
+	case redisql.REDISQL_CREATE_INDEX:
+		printResInfo(res)
+		break
+	case redisql.REDISQL_INSERT:
+		printResInfo(res)
+		break
+	case redisql.REDISQL_SELECT:
+		var fields []string
+		datas := redisql.ToArray(res.Result)
+		fields = datas[0]
+		datas = append(datas[:0], datas[1:]...)
+		show(fields, datas, res.ParseTime, res.QueryTime)
+		break
+	case redisql.REDISQL_UPDATE:
+		break
+	case redisql.REDISQL_DELETE:
+		break
+	case redisql.REDISQL_DROP_DATABASE:
+		break
+	case redisql.REDISQL_DROP_TABLE:
+		break
+	case redisql.REDISQL_EXIT:
+		break
+	case redisql.REDISQL_HELP:
+		break
+	case redisql.REDISQL_EMPTY:
+		break
+	default:
+		break
 	}
 }
 

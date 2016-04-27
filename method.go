@@ -76,6 +76,12 @@ func Query(sql string) (*QueryRes, error) {
 		res.Result = tbs
 		break
 	case REDISQL_SHOW_INDEX:
+		indexs, err := getIndexs(sqlParse.TableName)
+		if err != nil {
+			return nil, err
+		}
+		res.QueryTime = time.Now().Sub(queryStart).Seconds()
+		res.Result = indexs
 		break
 	case REDISQL_DESC:
 		tbInfo, usetime, err := GetTableInfo(sqlParse.TableName)
@@ -179,4 +185,39 @@ func Query(sql string) (*QueryRes, error) {
 	}
 
 	return res, nil
+}
+
+func ToArray(reply interface{}) [][]string {
+	var res [][]string
+	switch reply.(type) {
+	case []string:
+		datas := reply.([]string)
+		for _, data := range datas {
+			var dt []string
+			dt = append(dt, data)
+			res = append(res, dt)
+		}
+		break
+	case map[string][]string:
+		datas := reply.(map[string][]string)
+		for k, v := range datas {
+			var dt []string
+			var vs string
+			for i, tmpv := range v {
+				if i > 0 {
+					vs += ","
+				}
+				vs += tmpv
+			}
+			dt = append(dt, k)
+			dt = append(dt, vs)
+			res = append(res, dt)
+		}
+		break
+	case [][]string:
+		res = reply.([][]string)
+		break
+	}
+
+	return res
 }

@@ -89,7 +89,9 @@ func getFieldTypes() []FieldType {
 		fts := strings.Fields(C.GoString(ft))
 		C.free(unsafe.Pointer(ft))
 		tmpFt.Field = fts[0]
-		tmpFt.Type = fts[1]
+		if len(fts) >= 2 {
+			tmpFt.Type = fts[1]
+		}
 		res = append(res, tmpFt)
 	}
 
@@ -118,7 +120,7 @@ func getFieldValues() []FieldValue {
 			tmpFv.Value, _ = strconv.ParseFloat(fvs[2], 64)
 			break
 		case C.REDISQL_STRING:
-			tmpFv.Value = fvs[2]
+			tmpFv.Value = strings.Trim(fvs[2], "'")
 		}
 		res = append(res, tmpFv)
 	}

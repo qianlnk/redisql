@@ -63,8 +63,8 @@ type SltField struct {
 }
 
 var (
-	CompareSign = []string{"=", "!=", ">", ">=", "<", "<=", "like"}
-	Opertion    = []string{"(", ")", "and", "or", "#"}
+	CompareSign = []string{"=", "!=", ">", ">=", "<", "<=", "LIKE"}
+	Opertion    = []string{"(", ")", "AND", "OR", "#"}
 )
 
 type Select struct {
@@ -218,7 +218,6 @@ func (slt *Select) check() error {
 }
 
 func (slt *Select) getEsDataIds(cartesianKey, left, opt, right string) (string, error) {
-	fmt.Printf("getEsDataIds start, cartesianKey = %s, left = %s, opt = %s, right = %s\n", cartesianKey, left, opt, right)
 	conn := getConn()
 	defer conn.Close()
 
@@ -231,6 +230,9 @@ func (slt *Select) getEsDataIds(cartesianKey, left, opt, right string) (string, 
 	}
 	if existsField(slt.Froms[lefts[0]], lefts[1]) == false {
 		return "", errors.New(fmt.Sprintf("field %s not found in table %s.", lefts[1], slt.Froms[lefts[0]]))
+	}
+	if existsIndex(slt.Froms[lefts[0]], fmt.Sprintf("index_%s", lefts[1])) == false {
+		return "", errors.New(fmt.Sprintf("expected index on %s(%s).", slt.Froms[lefts[0]], lefts[1]))
 	}
 	lefttype, err := getFieldType(slt.Froms[lefts[0]], lefts[1])
 	if err != nil {
@@ -246,6 +248,9 @@ func (slt *Select) getEsDataIds(cartesianKey, left, opt, right string) (string, 
 	if existsField(slt.Froms[rights[0]], rights[1]) == false {
 		return "", errors.New(fmt.Sprintf("field %s not found in table %s.", rights[1], slt.Froms[rights[0]]))
 	}
+	if existsIndex(slt.Froms[rights[0]], fmt.Sprintf("index_%s", rights[1])) == false {
+		return "", errors.New(fmt.Sprintf("expected index on %s(%s).", slt.Froms[rights[0]], rights[1]))
+	}
 	righttype, err := getFieldType(slt.Froms[rights[0]], rights[1])
 	if err != nil {
 		return "", err
@@ -253,7 +258,7 @@ func (slt *Select) getEsDataIds(cartesianKey, left, opt, right string) (string, 
 	if lefttype != righttype {
 		return "", errors.New(fmt.Sprintf("can not use type '%s' = '%s'.", lefttype, righttype))
 	}
-	fmt.Println(lefttype, righttype)
+
 	cdtSn, err := getNextConditionSn()
 	if err != nil {
 		return "", err
@@ -263,16 +268,15 @@ func (slt *Select) getEsDataIds(cartesianKey, left, opt, right string) (string, 
 	case REDISQL_TYPE_NUMBER:
 		if lefts[1] == "id" {
 			key := fmt.Sprintf(REDISQL_INDEX_DATAS, database, slt.Froms[rights[0]], rights[1])
-			fmt.Println("key:", key)
+
 			tmpids, err := redigo.Strings(conn.Do("ZRANGE", key, 0, -1, "withscores"))
 			if err != nil {
-				fmt.Println("err:", err)
 				return "", err
 			}
 			for i := 1; i < len(tmpids); i = i + 2 {
 				tmpkey1 := lefts[0] + "_" + tmpids[i] + "_" + rights[0] + "_" + tmpids[i-1] + "_"
 				tmpkey2 := rights[0] + "_" + tmpids[i-1] + "_" + lefts[0] + "_" + tmpids[i] + "_"
-				fmt.Println(cartesianKey, tmpkey1)
+
 				hkeys, err := redigo.Strings(conn.Do("HKEYS", cartesianKey))
 				if err != nil {
 					return "", err
@@ -430,6 +434,9 @@ func (slt *Select) getDataIds(left, option, right string) (string, []string, err
 	if existsField(slt.Froms[fields[0]], fields[1]) == false {
 		return "", nil, errors.New(fmt.Sprintf("field %s not found in table %s.", fields[1], slt.Froms[fields[0]]))
 	}
+	if existsIndex(slt.Froms[fields[0]], fmt.Sprintf("index_%s", fields[1])) == false {
+		return "", nil, errors.New(fmt.Sprintf("expected index on %s(%s).", slt.Froms[fields[0]], fields[1]))
+	}
 	fieldtype, err := getFieldType(slt.Froms[fields[0]], fields[1])
 	if err != nil {
 		return "", nil, err
@@ -458,12 +465,10 @@ func (slt *Select) getDataIds(left, option, right string) (string, []string, err
 				ids = append(ids, strings.Split(tmp, ".")[len(strings.Split(tmp, "."))-1])
 			}
 			return fields[0], outer(ids, outids), nil
-		case "like":
+		case "LIKE":
 			index := fmt.Sprintf("%s.%s", fields[1], strings.Replace(tmpRight, "%", "*", -1))
 			key := fmt.Sprintf(REDISQL_INDEX_DATAS, database, slt.Froms[fields[0]], index)
-			fmt.Println(fmt.Sprintf(REDISQL_INDEX_DATAS, database, slt.Froms[fields[0]], fmt.Sprintf("%s.%s", fields[1], strings.Replace(strings.Replace(right, "'", "", -1), "%", "*", -1))))
 			tmpkeys, err := redigo.Strings(conn.Do("KEYS", key))
-			fmt.Println("tmpkeys:", tmpkeys)
 			if err != nil {
 				return "", nil, err
 			}
@@ -489,14 +494,12 @@ func (slt *Select) getDataIds(left, option, right string) (string, []string, err
 			score = right
 		} else {
 			tmpRight := strings.Replace(right, "'", "", -1)
-			fmt.Println(tmpRight)
 			t, err := time.Parse("20060102150405", tmpRight)
 			if err != nil {
 				return "", nil, err
 			}
 			score = t.Format("20060102150405")
 		}
-		fmt.Printf("score:%s\n", score)
 		key := fmt.Sprintf(REDISQL_INDEX_DATAS, database, slt.Froms[fields[0]], fields[1])
 		switch option {
 		case "=":
@@ -568,26 +571,9 @@ func (slt *Select) judgeRight(left, right string) (bool, error) {
 	return false, errors.New("unknow, no more message.")
 }
 
-func merge(left, opt, right string) string {
-	if strings.Contains(left, "&") == false {
-		if opt == "and" {
-			return left + "&" + right
-		} else if opt == "or" {
-			lefttab := strings.Fields(left)
-			righttab := strings.Fields(right)
-			return left + "&" + righttab[0] + " *^" + lefttab[0] + " * &" + right
-		}
-	} else {
-
-	}
-	return ""
-}
-
-func (slt *Select) SELECT() ([]byte, error) {
-	fmt.Println(slt)
+func (slt *Select) SELECT() ([][]string, error) {
 	err := slt.check()
 	if err != nil {
-		fmt.Println("err:", err)
 		return nil, err
 	}
 
@@ -608,7 +594,6 @@ func (slt *Select) SELECT() ([]byte, error) {
 			key := fmt.Sprintf(REDISQL_INDEX_DATAS, database, tableName, "id")
 			ids, err = redigo.Strings(conn.Do("ZRANGE", key, 0, -1))
 			if err != nil {
-				fmt.Println("err:", err)
 				return nil, err
 			}
 		} else { //single or more condition
@@ -622,7 +607,6 @@ func (slt *Select) SELECT() ([]byte, error) {
 				if val == "#" && snStack.GetPOP() == "#" {
 					break
 				}
-				fmt.Println("val:", val)
 				if inarray(Opertion, val) == false && inarray(CompareSign, val) == false { //not opertion or relationship sign
 					if inarray(CompareSign, snStack.GetPOP()) == false { //no relationship sign at top snStack
 						esStack.PUSH(val)
@@ -636,7 +620,6 @@ func (slt *Select) SELECT() ([]byte, error) {
 						}
 						if ok {
 							alias, tmpids, err := slt.getDataIds(left, opt, right)
-							fmt.Println("getDataIds:", alias, tmpids, err)
 							if err != nil {
 								return nil, err
 							}
@@ -664,7 +647,6 @@ func (slt *Select) SELECT() ([]byte, error) {
 					i++
 				} else if inarray(Opertion, val) == true {
 					res := Compare(snStack.GetPOP(), val)
-					fmt.Println(snStack.GetPOP(), val, "res=", res)
 					switch res {
 					case REDISQL_PRIORITY_LESS:
 						snStack.PUSH(val)
@@ -678,7 +660,6 @@ func (slt *Select) SELECT() ([]byte, error) {
 						right := esStack.POP()
 						left := esStack.POP()
 						opt := snStack.POP()
-						fmt.Printf("%s %s %s\n", left, opt, right)
 						reskey, err := singleMerge(left, opt, right)
 						if err != nil {
 							return nil, err
@@ -698,65 +679,67 @@ func (slt *Select) SELECT() ([]byte, error) {
 			}
 
 		}
-		fmt.Println(ids)
 		var fields []interface{}
 		for _, f := range slt.Fields {
 			fields = append(fields, f.Name)
 		}
 
 		var datas [][]string
+		var fieldAliases []string
+		for _, f := range slt.Fields {
+			fieldAliases = append(fieldAliases, f.Alias)
+		}
+		datas = append(datas, fieldAliases)
 		for _, id := range ids {
 			var params []interface{}
 			params = append(params, fmt.Sprintf(REDISQL_DATAS, database, slt.Froms[slt.Fields[0].TableAlias], id))
 			params = append(params, fields...)
-			fmt.Println(params)
 			datas1, err := redigo.Strings(conn.Do("HMGET", params...))
 			if err != nil {
 				return nil, err
 			}
 			datas = append(datas, datas1)
 		}
-		var resstring string
-		resstring += "{"
-		for i, f := range slt.Fields {
-			if i > 0 {
-				resstring += ","
-			}
-			resstring += fmt.Sprintf("\"%s\":[", f.Alias)
-			for j, data := range datas {
-				if slt.Top > 0 && j >= slt.Top {
-					break
-				}
-				if slt.Limit != nil && j < slt.Limit[0] {
-					continue
-				}
-				if slt.Limit != nil && j > slt.Limit[1] {
-					break
-				}
-				if slt.Limit == nil && j > 0 {
-					resstring += ","
-				} else if slt.Limit != nil && j > slt.Limit[0] {
-					resstring += ","
-				}
-				resstring += fmt.Sprintf("\"%s\"", data[i])
-			}
-			resstring += "]"
-		}
-		resstring += "}"
-		fmt.Println(resstring)
-		return []byte(resstring), nil
+		//fmt.Println(datas)
+		//		var resstring string
+		//		resstring += "{"
+		//		for i, f := range slt.Fields {
+		//			if i > 0 {
+		//				resstring += ","
+		//			}
+		//			resstring += fmt.Sprintf("\"%s\":[", f.Alias)
+		//			for j, data := range datas {
+		//				if slt.Top > 0 && j >= slt.Top {
+		//					break
+		//				}
+		//				if slt.Limit != nil && j < slt.Limit[0] {
+		//					continue
+		//				}
+		//				if slt.Limit != nil && j > slt.Limit[1] {
+		//					break
+		//				}
+		//				if slt.Limit == nil && j > 0 {
+		//					resstring += ","
+		//				} else if slt.Limit != nil && j > slt.Limit[0] {
+		//					resstring += ","
+		//				}
+		//				resstring += fmt.Sprintf("\"%s\"", data[i])
+		//			}
+		//			resstring += "]"
+		//		}
+		//		resstring += "}"
+		//		fmt.Println(resstring)
+		return datas, nil
 	} else { //two or more tables query
 		cartesiankey, err := slt.cartesianProduct()
 		if err != nil {
 			return nil, err
 		}
-		fmt.Println(cartesiankey)
 		var ids []string
 		if len(slt.Where) == 0 { //no condition
 			//get all ids
 			ids, err = redigo.Strings(conn.Do("HKEYS", cartesiankey))
 			if err != nil {
-				fmt.Println("err:", err)
 				return nil, err
 			}
 		} else { //single or more condition
@@ -770,7 +753,6 @@ func (slt *Select) SELECT() ([]byte, error) {
 				if val == "#" && snStack.GetPOP() == "#" {
 					break
 				}
-				fmt.Println("val:", val)
 				if inarray(Opertion, val) == false && inarray(CompareSign, val) == false { //not opertion or relationship sign
 					if inarray(CompareSign, snStack.GetPOP()) == false { //no relationship sign at top snStack
 						esStack.PUSH(val)
@@ -784,7 +766,6 @@ func (slt *Select) SELECT() ([]byte, error) {
 						}
 						if ok {
 							alias, tmpids, err := slt.getDataIds(left, opt, right)
-							fmt.Println("getDataIds:", alias, tmpids, err)
 							if err != nil {
 								return nil, err
 							}
@@ -825,7 +806,6 @@ func (slt *Select) SELECT() ([]byte, error) {
 					i++
 				} else if inarray(Opertion, val) == true {
 					res := Compare(snStack.GetPOP(), val)
-					fmt.Println(snStack.GetPOP(), val, "res=", res)
 					switch res {
 					case REDISQL_PRIORITY_LESS:
 						snStack.PUSH(val)
@@ -839,7 +819,6 @@ func (slt *Select) SELECT() ([]byte, error) {
 						right := esStack.POP()
 						left := esStack.POP()
 						opt := snStack.POP()
-						fmt.Printf("%s %s %s\n", left, opt, right)
 						reskey, err := singleMerge(left, opt, right)
 						if err != nil {
 							return nil, err
@@ -859,8 +838,12 @@ func (slt *Select) SELECT() ([]byte, error) {
 			}
 
 		}
-		fmt.Println(ids)
 		var datas [][]string
+		var fields []string
+		for _, f := range slt.Fields {
+			fields = append(fields, f.Alias)
+		}
+		datas = append(datas, fields)
 		for _, id := range ids {
 			tmpids := strings.Split(id, "_")
 			idmap := make(map[string]string)
@@ -879,35 +862,35 @@ func (slt *Select) SELECT() ([]byte, error) {
 			datas = append(datas, dataid)
 		}
 
-		var resstring string
-		resstring += "{"
-		for i, f := range slt.Fields {
-			if i > 0 {
-				resstring += ","
-			}
-			resstring += fmt.Sprintf("\"%s\":[", f.Alias)
-			for j, data := range datas {
-				if slt.Top > 0 && j >= slt.Top {
-					break
-				}
-				if slt.Limit != nil && j < slt.Limit[0] {
-					continue
-				}
-				if slt.Limit != nil && j > slt.Limit[1] {
-					break
-				}
-				if slt.Limit == nil && j > 0 {
-					resstring += ","
-				} else if slt.Limit != nil && j > slt.Limit[0] {
-					resstring += ","
-				}
-				resstring += fmt.Sprintf("\"%s\"", data[i])
-			}
-			resstring += "]"
-		}
-		resstring += "}"
-		fmt.Println(resstring)
-		return []byte(resstring), nil
+		//		var resstring string
+		//		resstring += "{"
+		//		for i, f := range slt.Fields {
+		//			if i > 0 {
+		//				resstring += ","
+		//			}
+		//			resstring += fmt.Sprintf("\"%s\":[", f.Alias)
+		//			for j, data := range datas {
+		//				if slt.Top > 0 && j >= slt.Top {
+		//					break
+		//				}
+		//				if slt.Limit != nil && j < slt.Limit[0] {
+		//					continue
+		//				}
+		//				if slt.Limit != nil && j > slt.Limit[1] {
+		//					break
+		//				}
+		//				if slt.Limit == nil && j > 0 {
+		//					resstring += ","
+		//				} else if slt.Limit != nil && j > slt.Limit[0] {
+		//					resstring += ","
+		//				}
+		//				resstring += fmt.Sprintf("\"%s\"", data[i])
+		//			}
+		//			resstring += "]"
+		//		}
+		//		resstring += "}"
+		//		fmt.Println(resstring)
+		return datas, nil
 	}
 
 }
@@ -936,15 +919,14 @@ func singleMerge(left, opt, right string) (string, error) {
 	}
 	tmp := strings.Split(left, ".tmp.condition.")
 	key := tmp[0] + ".tmp.condition." + strconv.Itoa(cdtSn)
-	fmt.Println(key)
 	switch opt {
-	case "and":
+	case "AND":
 		_, err = conn.Do("SINTERSTORE", key, left, right)
 		if err != nil {
 			return "", err
 		}
 		break
-	case "or":
+	case "OR":
 		_, err = conn.Do("SUNIONSTORE", key, left, right)
 		if err != nil {
 			return "", err
@@ -971,10 +953,8 @@ func (slt *Select) cartesianProduct() (string, error) {
 		}
 		alias = append(alias, k)
 	}
-	fmt.Println("ids:", ids)
 	hkeys := make([]string, 0, 5)
 	for i, a := range alias {
-		fmt.Println("hkeys:", hkeys, "   i:", i, "   a:", a)
 		if len(ids[a]) <= 0 { //some table is null, return an unexist key
 			return "", errors.New("no result.")
 		}
@@ -990,7 +970,6 @@ func (slt *Select) cartesianProduct() (string, error) {
 				tmphkey := a + "_" + id + "_"
 				for _, k := range tmphkeys {
 					tmphk := k + tmphkey
-					fmt.Println("k:", k, "   tmphkey:", tmphk)
 					hkeys = append(hkeys, tmphk)
 				}
 			}

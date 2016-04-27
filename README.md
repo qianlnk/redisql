@@ -1,14 +1,21 @@
 redisql
 ----
-##support Query
-* Exact Match Query
-* Range Query
-* Simple query conditions
-* Count
+##support Query Cmds
+* use databasename
+* show databases
+* show tables
+* show index from tablename
+* create database databasename
+* create table tablename(field1 type1, ...);
+* create index indexname on tablename(field);
+* insert into tablename(field1 ...) values(value1 ...)
+* select
 * Limit
 * Other Comming soon
 
 ##how to use
+###client
+		in dir redisql_cli
 ###connect to redis
 ```golang
 redisql.Connect("127.0.0.1", "6379", "", "tcp", 5, 120)

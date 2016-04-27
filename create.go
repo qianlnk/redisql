@@ -16,7 +16,6 @@ import (
 //		TABLE("user").FIELDS("name").INDEX()
 
 func CreateDatabase(dbname string) error {
-	fmt.Println("create database %s start...", dbname)
 	db := strings.ToLower(strings.Trim(dbname, " "))
 	if len(db) <= 0 {
 		return errors.New("database name can not be null.")
@@ -47,7 +46,6 @@ type Table struct {
 }
 
 func TABLE(tablename string) *Table {
-	fmt.Println("table start...")
 	if len(database) <= 0 {
 		panic("you have not choose database, please call func 'ChangeDatabase'.")
 	}
@@ -105,8 +103,6 @@ func (tab *Table) TYPES(types ...string) *Table {
 }
 
 func (tab *Table) CREATE() error {
-	fmt.Println("create start...data:", *tab)
-
 	conn := getConn()
 	defer conn.Close()
 
@@ -172,8 +168,6 @@ func (tab *Table) CREATE() error {
 }
 
 func (tab *Table) INDEX() error {
-	fmt.Println("index start...date:", tab)
-
 	conn := getConn()
 	defer conn.Close()
 
@@ -211,14 +205,13 @@ func (tab *Table) INDEX() error {
 
 	//add index
 	//get all data
-	fmt.Println(fmt.Sprintf(REDISQL_DATAS, database, tab.Name, "*"))
 	rows, err := redigo.Strings(conn.Do("KEYS", fmt.Sprintf(REDISQL_DATAS, database, tab.Name, "*")))
 	if err != nil {
 		return err
 	}
-	fmt.Println("row:", rows)
+
 	for _, r := range rows {
-		fmt.Println(r)
+
 		var indexField string
 		for i := 0; i < len(tab.Fields); i++ {
 			value, err := redigo.String(conn.Do("HGET", r, tab.Fields[i]))
@@ -230,7 +223,7 @@ func (tab *Table) INDEX() error {
 			}
 			indexField += fmt.Sprintf("%s.%s", tab.Fields[i], value)
 		}
-		fmt.Println(indexField)
+
 		ids := strings.Split(r, ".")
 		if fieldtype == "" || fieldtype == REDISQL_TYPE_STRING {
 			_, err := conn.Do("SADD", fmt.Sprintf(REDISQL_INDEX_DATAS, database, tab.Name, indexField), ids[len(ids)-1])
@@ -249,7 +242,7 @@ func (tab *Table) INDEX() error {
 			} else {
 				score = kv[1]
 			}
-			fmt.Printf("score = %s", score)
+
 			_, err := conn.Do("ZADD", fmt.Sprintf(REDISQL_INDEX_DATAS, database, tab.Name, kv[0]), score, ids[len(ids)-1])
 			if err != nil {
 				return err

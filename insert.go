@@ -18,7 +18,6 @@ type Insert struct {
 }
 
 func INTO(tablename string) *Insert {
-	fmt.Println("into start...")
 	if len(database) <= 0 {
 		panic("you have not choose database, please call func 'ChangeDatabase'.")
 	}
@@ -64,8 +63,6 @@ func (ist *Insert) VALUES(values ...interface{}) *Insert {
 }
 
 func (ist *Insert) INSERT() error {
-	fmt.Println("insert start...data:", *ist)
-
 	conn := getConn()
 	defer conn.Close()
 
@@ -168,7 +165,6 @@ func (ist *Insert) INSERT() error {
 			} else {
 				score = kv[1]
 			}
-			fmt.Printf("score = %s", score)
 			_, err := conn.Do("ZADD", fmt.Sprintf(REDISQL_INDEX_DATAS, database, ist.Into, kv[0]), score, tmpid)
 			if err != nil {
 				return err
