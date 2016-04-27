@@ -15,7 +15,7 @@ redisql
 
 ##how to use
 ###client
-		in dir redisql_cli
+![](https://github.com/qianlnk/redisql/raw/master/redisql.gif)
 ###connect to redis
 ```golang
 redisql.Connect("127.0.0.1", "6379", "", "tcp", 5, 120)
