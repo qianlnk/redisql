@@ -139,7 +139,7 @@ func ui(res *redisql.QueryRes) {
 
 func main() {
 	redisql.Connect("127.0.0.1", "6379", "", "tcp", 5, 120)
-	redisql.Selectdb(0)
+	redisql.Selectdb(1)
 	fmt.Printf(WELCOME_INFO)
 	database := "redisql"
 
