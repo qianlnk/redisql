@@ -735,6 +735,7 @@ func (slt *Select) SELECT() ([][]string, error) {
 		if err != nil {
 			return nil, err
 		}
+		fmt.Println("笛卡尔集: %s\n", cartesiankey)
 		var ids []string
 		if len(slt.Where) == 0 { //no condition
 			//get all ids
@@ -791,12 +792,14 @@ func (slt *Select) SELECT() ([][]string, error) {
 									}
 								}
 							}
+							fmt.Printf("条件: %s 过滤后笛卡尔集: %s\n", left+opt+right, key)
 							esStack.PUSH(key)
 						} else {
 							key, err := slt.getEsDataIds(cartesiankey, left, opt, right)
 							if err != nil {
 								return nil, err
 							}
+							fmt.Printf("条件: %s 过滤后笛卡尔集: %s\n", left+opt+right, key)
 							esStack.PUSH(key)
 						}
 					}
@@ -820,6 +823,7 @@ func (slt *Select) SELECT() ([][]string, error) {
 						left := esStack.POP()
 						opt := snStack.POP()
 						reskey, err := singleMerge(left, opt, right)
+						fmt.Printf("条件: %s 过滤后笛卡尔集: %s\n", left+opt+right, reskey)
 						if err != nil {
 							return nil, err
 						}
@@ -953,6 +957,7 @@ func (slt *Select) cartesianProduct() (string, error) {
 		}
 		alias = append(alias, k)
 	}
+	fmt.Printf("求笛卡尔集: %d %d", len(ids["a"]), len(ids["b"]))
 	hkeys := make([]string, 0, 5)
 	for i, a := range alias {
 		if len(ids[a]) <= 0 { //some table is null, return an unexist key
