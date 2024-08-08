@@ -1,6 +1,6 @@
 redisql
 ----
-##support Query Cmds
+## support Query Cmds
 * use databasename
 * show databases
 * show tables
