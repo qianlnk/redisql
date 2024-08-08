@@ -1,0 +1,2458 @@
+Terminals which are not used
+
+   LIKE
+   HELP
+   EXIT
+
+
+Grammar
+
+    0 $accept: sql $end
+
+    1 sql: use
+    2    | show
+    3    | desc
+    4    | create
+    5    | insert_into
+    6    | select
+
+    7 use: USE database_name opt_semicolon
+
+    8 show: show_databases
+    9     | show_tables
+   10     | show_index
+
+   11 show_databases: SHOW DATABASES opt_semicolon
+
+   12 show_tables: SHOW TABLES opt_semicolon
+
+   13 show_index: SHOW INDEX FROM table_name opt_semicolon
+
+   14 desc: DESC table_name opt_semicolon
+
+   15 create: create_database
+   16       | create_table
+   17       | create_index
+
+   18 create_database: CREATE DATABASE database_name opt_semicolon
+
+   19 create_table: CREATE TABLE table_name '(' column_name_type_list ')' opt_semicolon
+
+   20 column_name_type_list: column_name_type
+   21                      | column_name_type_list ',' column_name_type
+
+   22 column_name_type: column_name column_type opt_constraint_list
+
+   23 column_type: INT
+   24            | FLOAT
+   25            | DOUBLE
+   26            | CHAR
+   27            | VARCHAR
+   28            | TEXT
+   29            | DATE
+   30            | DATETIME
+   31            | column_type '(' INTVAL ')'
+
+   32 opt_constraint_list: constraint_list
+   33                    | /* empty */
+
+   34 constraint_list: constraint
+   35                | constraint constraint_list
+
+   36 constraint: NOT TOKEN_NULL
+   37           | UNIQUE
+   38           | PRIMARY KEY
+   39           | DEFAULT value
+   40           | AUTO_INCREMENT
+
+   41 create_index: CREATE INDEX index_name ON table_name '(' column_name_list ')' opt_semicolon
+
+   42 insert_into: INSERT INTO table_name opt_column_name_list VALUES '(' value_list ')' opt_semicolon
+
+   43 opt_column_name_list: '(' column_name_list ')'
+   44                     | /* empty */
+
+   45 column_name_list: column_name
+   46                 | column_name_list ',' column_name
+
+   47 value_list: value
+   48           | value_list ',' value
+
+   49 value: INTVAL
+   50      | FLOATVAL
+   51      | STRINGVAL
+
+   52 select: SELECT opt_distinct expression_list FROM table_list opt_where_condition opt_top opt_limit opt_semicolon
+
+   53 opt_distinct: DISTINCT
+   54             | /* empty */
+
+   55 expression_list: expression opt_alias
+   56                | expression_list ',' expression opt_alias
+
+   57 opt_alias: AS NAME
+   58          | NAME
+   59          | /* empty */
+
+   60 expression: expression '+' mulexp
+   61           | expression '-' mulexp
+   62           | mulexp
+
+   63 mulexp: mulexp '*' primary
+   64       | mulexp '/' primary
+   65       | mulexp CONCAT primary
+   66       | primary
+
+   67 primary: '(' expression ')'
+   68        | '-' primary
+   69        | term
+
+   70 term: value
+   71     | TOKEN_NULL
+   72     | column_reference
+   73     | function_name '(' expression ')'
+
+   74 column_reference: column_name_or_star
+   75                 | table_name '.' column_name_or_star
+
+   76 function_name: COUNT
+   77              | SUM
+   78              | AVG
+   79              | MIN
+   80              | MAX
+
+   81 column_name_or_star: '*'
+   82                    | column_name
+
+   83 table_list: table_def
+   84           | table_list default_join table_def opt_join_condition
+   85           | join table_def opt_join_condition
+
+   86 table_def: table_name opt_alias
+
+   87 default_join: ','
+   88             | JOIN
+   89             | CROSS JOIN
+   90             | INNER JOIN
+
+   91 join: LEFT opt_outer JOIN
+   92     | RIGHT opt_outer JOIN
+   93     | FULL opt_outer JOIN
+   94     | NATURAL JOIN
+
+   95 opt_outer: OUTER
+   96          | /* empty */
+
+   97 opt_join_condition: join_condition
+   98                   | /* empty */
+
+   99 join_condition: ON condition
+
+  100 database_name: NAME
+
+  101 table_name: NAME
+
+  102 column_name: NAME
+
+  103 index_name: NAME
+
+  104 opt_semicolon: ';'
+  105              | /* empty */
+
+  106 opt_where_condition: WHERE condition
+  107                    | /* empty */
+
+  108 condition: bool_term
+  109          | condition bool_op bool_term
+
+  110 bool_term: expression COMPARISON expression
+  111          | '(' condition ')'
+
+  112 bool_op: AND
+  113        | OR
+
+  114 opt_top: TOP INTVAL
+  115        | /* empty */
+
+  116 opt_limit: LIMIT INTVAL ',' INTVAL
+  117          | /* empty */
+
+
+Terminals, with rules where they appear
+
+$end (0) 0
+'(' (40) 19 31 41 42 43 67 73 111
+')' (41) 19 31 41 42 43 67 73 111
+'*' (42) 63 81
+'+' (43) 60
+',' (44) 21 46 48 56 87 116
+'-' (45) 61 68
+'.' (46) 75
+'/' (47) 64
+';' (59) 104
+error (256)
+USE (258) 7
+SHOW (259) 11 12 13
+DATABASES (260) 11
+TABLES (261) 12
+INDEX (262) 13 41
+FROM (263) 13 52
+DESC (264) 14
+CREATE (265) 18 19 41
+DATABASE (266) 18
+TABLE (267) 19
+ON (268) 41 99
+INSERT (269) 42
+INTO (270) 42
+VALUES (271) 42
+SELECT (272) 52
+DISTINCT (273) 53
+AS (274) 57
+WHERE (275) 106
+AND (276) 112
+OR (277) 113
+LIKE (278)
+TOP (279) 114
+LIMIT (280) 116
+HELP (281)
+EXIT (282)
+NOT (283) 36
+TOKEN_NULL (284) 36 71
+UNIQUE (285) 37
+PRIMARY (286) 38
+KEY (287) 38
+DEFAULT (288) 39
+AUTO_INCREMENT (289) 40
+COUNT (290) 76
+SUM (291) 77
+AVG (292) 78
+MIN (293) 79
+MAX (294) 80
+JOIN (295) 88 89 90 91 92 93 94
+CROSS (296) 89
+INNER (297) 90
+LEFT (298) 91
+RIGHT (299) 92
+FULL (300) 93
+NATURAL (301) 94
+OUTER (302) 95
+CONCAT (303) 65
+INT (304) 23
+FLOAT (305) 24
+DOUBLE (306) 25
+CHAR (307) 26
+VARCHAR (308) 27
+TEXT (309) 28
+DATE (310) 29
+DATETIME (311) 30
+NAME (312) 57 58 100 101 102 103
+STRINGVAL (313) 51
+COMPARISON (314) 110
+INTVAL (315) 31 49 114 116
+FLOATVAL (316) 50
+
+
+Nonterminals, with rules where they appear
+
+$accept (71)
+    on left: 0
+sql (72)
+    on left: 1 2 3 4 5 6, on right: 0
+use (73)
+    on left: 7, on right: 1
+show (74)
+    on left: 8 9 10, on right: 2
+show_databases (75)
+    on left: 11, on right: 8
+show_tables (76)
+    on left: 12, on right: 9
+show_index (77)
+    on left: 13, on right: 10
+desc (78)
+    on left: 14, on right: 3
+create (79)
+    on left: 15 16 17, on right: 4
+create_database (80)
+    on left: 18, on right: 15
+create_table (81)
+    on left: 19, on right: 16
+column_name_type_list (82)
+    on left: 20 21, on right: 19 21
+column_name_type (83)
+    on left: 22, on right: 20 21
+column_type (84)
+    on left: 23 24 25 26 27 28 29 30 31, on right: 22 31
+opt_constraint_list (85)
+    on left: 32 33, on right: 22
+constraint_list (86)
+    on left: 34 35, on right: 32 35
+constraint (87)
+    on left: 36 37 38 39 40, on right: 34 35
+create_index (88)
+    on left: 41, on right: 17
+insert_into (89)
+    on left: 42, on right: 5
+opt_column_name_list (90)
+    on left: 43 44, on right: 42
+column_name_list (91)
+    on left: 45 46, on right: 41 43 46
+value_list (92)
+    on left: 47 48, on right: 42 48
+value (93)
+    on left: 49 50 51, on right: 39 47 48 70
+select (94)
+    on left: 52, on right: 6
+opt_distinct (95)
+    on left: 53 54, on right: 52
+expression_list (96)
+    on left: 55 56, on right: 52 56
+opt_alias (97)
+    on left: 57 58 59, on right: 55 56 86
+expression (98)
+    on left: 60 61 62, on right: 55 56 60 61 67 73 110
+mulexp (99)
+    on left: 63 64 65 66, on right: 60 61 62 63 64 65
+primary (100)
+    on left: 67 68 69, on right: 63 64 65 66 68
+term (101)
+    on left: 70 71 72 73, on right: 69
+column_reference (102)
+    on left: 74 75, on right: 72
+function_name (103)
+    on left: 76 77 78 79 80, on right: 73
+column_name_or_star (104)
+    on left: 81 82, on right: 74 75
+table_list (105)
+    on left: 83 84 85, on right: 52 84
+table_def (106)
+    on left: 86, on right: 83 84 85
+default_join (107)
+    on left: 87 88 89 90, on right: 84
+join (108)
+    on left: 91 92 93 94, on right: 85
+opt_outer (109)
+    on left: 95 96, on right: 91 92 93
+opt_join_condition (110)
+    on left: 97 98, on right: 84 85
+join_condition (111)
+    on left: 99, on right: 97
+database_name (112)
+    on left: 100, on right: 7 18
+table_name (113)
+    on left: 101, on right: 13 14 19 41 42 75 86
+column_name (114)
+    on left: 102, on right: 22 45 46 82
+index_name (115)
+    on left: 103, on right: 41
+opt_semicolon (116)
+    on left: 104 105, on right: 7 11 12 13 14 18 19 41 42 52
+opt_where_condition (117)
+    on left: 106 107, on right: 52
+condition (118)
+    on left: 108 109, on right: 99 106 109 111
+bool_term (119)
+    on left: 110 111, on right: 108 109
+bool_op (120)
+    on left: 112 113, on right: 109
+opt_top (121)
+    on left: 114 115, on right: 52
+opt_limit (122)
+    on left: 116 117, on right: 52
+
+
+state 0
+
+    0 $accept: . sql $end
+
+    USE     shift, and go to state 1
+    SHOW    shift, and go to state 2
+    DESC    shift, and go to state 3
+    CREATE  shift, and go to state 4
+    INSERT  shift, and go to state 5
+    SELECT  shift, and go to state 6
+
+    sql              go to state 7
+    use              go to state 8
+    show             go to state 9
+    show_databases   go to state 10
+    show_tables      go to state 11
+    show_index       go to state 12
+    desc             go to state 13
+    create           go to state 14
+    create_database  go to state 15
+    create_table     go to state 16
+    create_index     go to state 17
+    insert_into      go to state 18
+    select           go to state 19
+
+
+state 1
+
+    7 use: USE . database_name opt_semicolon
+
+    NAME  shift, and go to state 20
+
+    database_name  go to state 21
+
+
+state 2
+
+   11 show_databases: SHOW . DATABASES opt_semicolon
+   12 show_tables: SHOW . TABLES opt_semicolon
+   13 show_index: SHOW . INDEX FROM table_name opt_semicolon
+
+    DATABASES  shift, and go to state 22
+    TABLES     shift, and go to state 23
+    INDEX      shift, and go to state 24
+
+
+state 3
+
+   14 desc: DESC . table_name opt_semicolon
+
+    NAME  shift, and go to state 25
+
+    table_name  go to state 26
+
+
+state 4
+
+   18 create_database: CREATE . DATABASE database_name opt_semicolon
+   19 create_table: CREATE . TABLE table_name '(' column_name_type_list ')' opt_semicolon
+   41 create_index: CREATE . INDEX index_name ON table_name '(' column_name_list ')' opt_semicolon
+
+    INDEX     shift, and go to state 27
+    DATABASE  shift, and go to state 28
+    TABLE     shift, and go to state 29
+
+
+state 5
+
+   42 insert_into: INSERT . INTO table_name opt_column_name_list VALUES '(' value_list ')' opt_semicolon
+
+    INTO  shift, and go to state 30
+
+
+state 6
+
+   52 select: SELECT . opt_distinct expression_list FROM table_list opt_where_condition opt_top opt_limit opt_semicolon
+
+    DISTINCT  shift, and go to state 31
+
+    $default  reduce using rule 54 (opt_distinct)
+
+    opt_distinct  go to state 32
+
+
+state 7
+
+    0 $accept: sql . $end
+
+    $end  shift, and go to state 33
+
+
+state 8
+
+    1 sql: use .
+
+    $default  reduce using rule 1 (sql)
+
+
+state 9
+
+    2 sql: show .
+
+    $default  reduce using rule 2 (sql)
+
+
+state 10
+
+    8 show: show_databases .
+
+    $default  reduce using rule 8 (show)
+
+
+state 11
+
+    9 show: show_tables .
+
+    $default  reduce using rule 9 (show)
+
+
+state 12
+
+   10 show: show_index .
+
+    $default  reduce using rule 10 (show)
+
+
+state 13
+
+    3 sql: desc .
+
+    $default  reduce using rule 3 (sql)
+
+
+state 14
+
+    4 sql: create .
+
+    $default  reduce using rule 4 (sql)
+
+
+state 15
+
+   15 create: create_database .
+
+    $default  reduce using rule 15 (create)
+
+
+state 16
+
+   16 create: create_table .
+
+    $default  reduce using rule 16 (create)
+
+
+state 17
+
+   17 create: create_index .
+
+    $default  reduce using rule 17 (create)
+
+
+state 18
+
+    5 sql: insert_into .
+
+    $default  reduce using rule 5 (sql)
+
+
+state 19
+
+    6 sql: select .
+
+    $default  reduce using rule 6 (sql)
+
+
+state 20
+
+  100 database_name: NAME .
+
+    $default  reduce using rule 100 (database_name)
+
+
+state 21
+
+    7 use: USE database_name . opt_semicolon
+
+    ';'  shift, and go to state 34
+
+    $default  reduce using rule 105 (opt_semicolon)
+
+    opt_semicolon  go to state 35
+
+
+state 22
+
+   11 show_databases: SHOW DATABASES . opt_semicolon
+
+    ';'  shift, and go to state 34
+
+    $default  reduce using rule 105 (opt_semicolon)
+
+    opt_semicolon  go to state 36
+
+
+state 23
+
+   12 show_tables: SHOW TABLES . opt_semicolon
+
+    ';'  shift, and go to state 34
+
+    $default  reduce using rule 105 (opt_semicolon)
+
+    opt_semicolon  go to state 37
+
+
+state 24
+
+   13 show_index: SHOW INDEX . FROM table_name opt_semicolon
+
+    FROM  shift, and go to state 38
+
+
+state 25
+
+  101 table_name: NAME .
+
+    $default  reduce using rule 101 (table_name)
+
+
+state 26
+
+   14 desc: DESC table_name . opt_semicolon
+
+    ';'  shift, and go to state 34
+
+    $default  reduce using rule 105 (opt_semicolon)
+
+    opt_semicolon  go to state 39
+
+
+state 27
+
+   41 create_index: CREATE INDEX . index_name ON table_name '(' column_name_list ')' opt_semicolon
+
+    NAME  shift, and go to state 40
+
+    index_name  go to state 41
+
+
+state 28
+
+   18 create_database: CREATE DATABASE . database_name opt_semicolon
+
+    NAME  shift, and go to state 20
+
+    database_name  go to state 42
+
+
+state 29
+
+   19 create_table: CREATE TABLE . table_name '(' column_name_type_list ')' opt_semicolon
+
+    NAME  shift, and go to state 25
+
+    table_name  go to state 43
+
+
+state 30
+
+   42 insert_into: INSERT INTO . table_name opt_column_name_list VALUES '(' value_list ')' opt_semicolon
+
+    NAME  shift, and go to state 25
+
+    table_name  go to state 44
+
+
+state 31
+
+   53 opt_distinct: DISTINCT .
+
+    $default  reduce using rule 53 (opt_distinct)
+
+
+state 32
+
+   52 select: SELECT opt_distinct . expression_list FROM table_list opt_where_condition opt_top opt_limit opt_semicolon
+
+    TOKEN_NULL  shift, and go to state 45
+    COUNT       shift, and go to state 46
+    SUM         shift, and go to state 47
+    AVG         shift, and go to state 48
+    MIN         shift, and go to state 49
+    MAX         shift, and go to state 50
+    NAME        shift, and go to state 51
+    STRINGVAL   shift, and go to state 52
+    '('         shift, and go to state 53
+    '-'         shift, and go to state 54
+    '*'         shift, and go to state 55
+    INTVAL      shift, and go to state 56
+    FLOATVAL    shift, and go to state 57
+
+    value                go to state 58
+    expression_list      go to state 59
+    expression           go to state 60
+    mulexp               go to state 61
+    primary              go to state 62
+    term                 go to state 63
+    column_reference     go to state 64
+    function_name        go to state 65
+    column_name_or_star  go to state 66
+    table_name           go to state 67
+    column_name          go to state 68
+
+
+state 33
+
+    0 $accept: sql $end .
+
+    $default  accept
+
+
+state 34
+
+  104 opt_semicolon: ';' .
+
+    $default  reduce using rule 104 (opt_semicolon)
+
+
+state 35
+
+    7 use: USE database_name opt_semicolon .
+
+    $default  reduce using rule 7 (use)
+
+
+state 36
+
+   11 show_databases: SHOW DATABASES opt_semicolon .
+
+    $default  reduce using rule 11 (show_databases)
+
+
+state 37
+
+   12 show_tables: SHOW TABLES opt_semicolon .
+
+    $default  reduce using rule 12 (show_tables)
+
+
+state 38
+
+   13 show_index: SHOW INDEX FROM . table_name opt_semicolon
+
+    NAME  shift, and go to state 25
+
+    table_name  go to state 69
+
+
+state 39
+
+   14 desc: DESC table_name opt_semicolon .
+
+    $default  reduce using rule 14 (desc)
+
+
+state 40
+
+  103 index_name: NAME .
+
+    $default  reduce using rule 103 (index_name)
+
+
+state 41
+
+   41 create_index: CREATE INDEX index_name . ON table_name '(' column_name_list ')' opt_semicolon
+
+    ON  shift, and go to state 70
+
+
+state 42
+
+   18 create_database: CREATE DATABASE database_name . opt_semicolon
+
+    ';'  shift, and go to state 34
+
+    $default  reduce using rule 105 (opt_semicolon)
+
+    opt_semicolon  go to state 71
+
+
+state 43
+
+   19 create_table: CREATE TABLE table_name . '(' column_name_type_list ')' opt_semicolon
+
+    '('  shift, and go to state 72
+
+
+state 44
+
+   42 insert_into: INSERT INTO table_name . opt_column_name_list VALUES '(' value_list ')' opt_semicolon
+
+    '('  shift, and go to state 73
+
+    $default  reduce using rule 44 (opt_column_name_list)
+
+    opt_column_name_list  go to state 74
+
+
+state 45
+
+   71 term: TOKEN_NULL .
+
+    $default  reduce using rule 71 (term)
+
+
+state 46
+
+   76 function_name: COUNT .
+
+    $default  reduce using rule 76 (function_name)
+
+
+state 47
+
+   77 function_name: SUM .
+
+    $default  reduce using rule 77 (function_name)
+
+
+state 48
+
+   78 function_name: AVG .
+
+    $default  reduce using rule 78 (function_name)
+
+
+state 49
+
+   79 function_name: MIN .
+
+    $default  reduce using rule 79 (function_name)
+
+
+state 50
+
+   80 function_name: MAX .
+
+    $default  reduce using rule 80 (function_name)
+
+
+state 51
+
+  101 table_name: NAME .
+  102 column_name: NAME .
+
+    '.'       reduce using rule 101 (table_name)
+    $default  reduce using rule 102 (column_name)
+
+
+state 52
+
+   51 value: STRINGVAL .
+
+    $default  reduce using rule 51 (value)
+
+
+state 53
+
+   67 primary: '(' . expression ')'
+
+    TOKEN_NULL  shift, and go to state 45
+    COUNT       shift, and go to state 46
+    SUM         shift, and go to state 47
+    AVG         shift, and go to state 48
+    MIN         shift, and go to state 49
+    MAX         shift, and go to state 50
+    NAME        shift, and go to state 51
+    STRINGVAL   shift, and go to state 52
+    '('         shift, and go to state 53
+    '-'         shift, and go to state 54
+    '*'         shift, and go to state 55
+    INTVAL      shift, and go to state 56
+    FLOATVAL    shift, and go to state 57
+
+    value                go to state 58
+    expression           go to state 75
+    mulexp               go to state 61
+    primary              go to state 62
+    term                 go to state 63
+    column_reference     go to state 64
+    function_name        go to state 65
+    column_name_or_star  go to state 66
+    table_name           go to state 67
+    column_name          go to state 68
+
+
+state 54
+
+   68 primary: '-' . primary
+
+    TOKEN_NULL  shift, and go to state 45
+    COUNT       shift, and go to state 46
+    SUM         shift, and go to state 47
+    AVG         shift, and go to state 48
+    MIN         shift, and go to state 49
+    MAX         shift, and go to state 50
+    NAME        shift, and go to state 51
+    STRINGVAL   shift, and go to state 52
+    '('         shift, and go to state 53
+    '-'         shift, and go to state 54
+    '*'         shift, and go to state 55
+    INTVAL      shift, and go to state 56
+    FLOATVAL    shift, and go to state 57
+
+    value                go to state 58
+    primary              go to state 76
+    term                 go to state 63
+    column_reference     go to state 64
+    function_name        go to state 65
+    column_name_or_star  go to state 66
+    table_name           go to state 67
+    column_name          go to state 68
+
+
+state 55
+
+   81 column_name_or_star: '*' .
+
+    $default  reduce using rule 81 (column_name_or_star)
+
+
+state 56
+
+   49 value: INTVAL .
+
+    $default  reduce using rule 49 (value)
+
+
+state 57
+
+   50 value: FLOATVAL .
+
+    $default  reduce using rule 50 (value)
+
+
+state 58
+
+   70 term: value .
+
+    $default  reduce using rule 70 (term)
+
+
+state 59
+
+   52 select: SELECT opt_distinct expression_list . FROM table_list opt_where_condition opt_top opt_limit opt_semicolon
+   56 expression_list: expression_list . ',' expression opt_alias
+
+    FROM  shift, and go to state 77
+    ','   shift, and go to state 78
+
+
+state 60
+
+   55 expression_list: expression . opt_alias
+   60 expression: expression . '+' mulexp
+   61           | expression . '-' mulexp
+
+    AS    shift, and go to state 79
+    NAME  shift, and go to state 80
+    '+'   shift, and go to state 81
+    '-'   shift, and go to state 82
+
+    $default  reduce using rule 59 (opt_alias)
+
+    opt_alias  go to state 83
+
+
+state 61
+
+   62 expression: mulexp .
+   63 mulexp: mulexp . '*' primary
+   64       | mulexp . '/' primary
+   65       | mulexp . CONCAT primary
+
+    CONCAT  shift, and go to state 84
+    '*'     shift, and go to state 85
+    '/'     shift, and go to state 86
+
+    $default  reduce using rule 62 (expression)
+
+
+state 62
+
+   66 mulexp: primary .
+
+    $default  reduce using rule 66 (mulexp)
+
+
+state 63
+
+   69 primary: term .
+
+    $default  reduce using rule 69 (primary)
+
+
+state 64
+
+   72 term: column_reference .
+
+    $default  reduce using rule 72 (term)
+
+
+state 65
+
+   73 term: function_name . '(' expression ')'
+
+    '('  shift, and go to state 87
+
+
+state 66
+
+   74 column_reference: column_name_or_star .
+
+    $default  reduce using rule 74 (column_reference)
+
+
+state 67
+
+   75 column_reference: table_name . '.' column_name_or_star
+
+    '.'  shift, and go to state 88
+
+
+state 68
+
+   82 column_name_or_star: column_name .
+
+    $default  reduce using rule 82 (column_name_or_star)
+
+
+state 69
+
+   13 show_index: SHOW INDEX FROM table_name . opt_semicolon
+
+    ';'  shift, and go to state 34
+
+    $default  reduce using rule 105 (opt_semicolon)
+
+    opt_semicolon  go to state 89
+
+
+state 70
+
+   41 create_index: CREATE INDEX index_name ON . table_name '(' column_name_list ')' opt_semicolon
+
+    NAME  shift, and go to state 25
+
+    table_name  go to state 90
+
+
+state 71
+
+   18 create_database: CREATE DATABASE database_name opt_semicolon .
+
+    $default  reduce using rule 18 (create_database)
+
+
+state 72
+
+   19 create_table: CREATE TABLE table_name '(' . column_name_type_list ')' opt_semicolon
+
+    NAME  shift, and go to state 91
+
+    column_name_type_list  go to state 92
+    column_name_type       go to state 93
+    column_name            go to state 94
+
+
+state 73
+
+   43 opt_column_name_list: '(' . column_name_list ')'
+
+    NAME  shift, and go to state 91
+
+    column_name_list  go to state 95
+    column_name       go to state 96
+
+
+state 74
+
+   42 insert_into: INSERT INTO table_name opt_column_name_list . VALUES '(' value_list ')' opt_semicolon
+
+    VALUES  shift, and go to state 97
+
+
+state 75
+
+   60 expression: expression . '+' mulexp
+   61           | expression . '-' mulexp
+   67 primary: '(' expression . ')'
+
+    ')'  shift, and go to state 98
+    '+'  shift, and go to state 81
+    '-'  shift, and go to state 82
+
+
+state 76
+
+   68 primary: '-' primary .
+
+    $default  reduce using rule 68 (primary)
+
+
+state 77
+
+   52 select: SELECT opt_distinct expression_list FROM . table_list opt_where_condition opt_top opt_limit opt_semicolon
+
+    LEFT     shift, and go to state 99
+    RIGHT    shift, and go to state 100
+    FULL     shift, and go to state 101
+    NATURAL  shift, and go to state 102
+    NAME     shift, and go to state 25
+
+    table_list  go to state 103
+    table_def   go to state 104
+    join        go to state 105
+    table_name  go to state 106
+
+
+state 78
+
+   56 expression_list: expression_list ',' . expression opt_alias
+
+    TOKEN_NULL  shift, and go to state 45
+    COUNT       shift, and go to state 46
+    SUM         shift, and go to state 47
+    AVG         shift, and go to state 48
+    MIN         shift, and go to state 49
+    MAX         shift, and go to state 50
+    NAME        shift, and go to state 51
+    STRINGVAL   shift, and go to state 52
+    '('         shift, and go to state 53
+    '-'         shift, and go to state 54
+    '*'         shift, and go to state 55
+    INTVAL      shift, and go to state 56
+    FLOATVAL    shift, and go to state 57
+
+    value                go to state 58
+    expression           go to state 107
+    mulexp               go to state 61
+    primary              go to state 62
+    term                 go to state 63
+    column_reference     go to state 64
+    function_name        go to state 65
+    column_name_or_star  go to state 66
+    table_name           go to state 67
+    column_name          go to state 68
+
+
+state 79
+
+   57 opt_alias: AS . NAME
+
+    NAME  shift, and go to state 108
+
+
+state 80
+
+   58 opt_alias: NAME .
+
+    $default  reduce using rule 58 (opt_alias)
+
+
+state 81
+
+   60 expression: expression '+' . mulexp
+
+    TOKEN_NULL  shift, and go to state 45
+    COUNT       shift, and go to state 46
+    SUM         shift, and go to state 47
+    AVG         shift, and go to state 48
+    MIN         shift, and go to state 49
+    MAX         shift, and go to state 50
+    NAME        shift, and go to state 51
+    STRINGVAL   shift, and go to state 52
+    '('         shift, and go to state 53
+    '-'         shift, and go to state 54
+    '*'         shift, and go to state 55
+    INTVAL      shift, and go to state 56
+    FLOATVAL    shift, and go to state 57
+
+    value                go to state 58
+    mulexp               go to state 109
+    primary              go to state 62
+    term                 go to state 63
+    column_reference     go to state 64
+    function_name        go to state 65
+    column_name_or_star  go to state 66
+    table_name           go to state 67
+    column_name          go to state 68
+
+
+state 82
+
+   61 expression: expression '-' . mulexp
+
+    TOKEN_NULL  shift, and go to state 45
+    COUNT       shift, and go to state 46
+    SUM         shift, and go to state 47
+    AVG         shift, and go to state 48
+    MIN         shift, and go to state 49
+    MAX         shift, and go to state 50
+    NAME        shift, and go to state 51
+    STRINGVAL   shift, and go to state 52
+    '('         shift, and go to state 53
+    '-'         shift, and go to state 54
+    '*'         shift, and go to state 55
+    INTVAL      shift, and go to state 56
+    FLOATVAL    shift, and go to state 57
+
+    value                go to state 58
+    mulexp               go to state 110
+    primary              go to state 62
+    term                 go to state 63
+    column_reference     go to state 64
+    function_name        go to state 65
+    column_name_or_star  go to state 66
+    table_name           go to state 67
+    column_name          go to state 68
+
+
+state 83
+
+   55 expression_list: expression opt_alias .
+
+    $default  reduce using rule 55 (expression_list)
+
+
+state 84
+
+   65 mulexp: mulexp CONCAT . primary
+
+    TOKEN_NULL  shift, and go to state 45
+    COUNT       shift, and go to state 46
+    SUM         shift, and go to state 47
+    AVG         shift, and go to state 48
+    MIN         shift, and go to state 49
+    MAX         shift, and go to state 50
+    NAME        shift, and go to state 51
+    STRINGVAL   shift, and go to state 52
+    '('         shift, and go to state 53
+    '-'         shift, and go to state 54
+    '*'         shift, and go to state 55
+    INTVAL      shift, and go to state 56
+    FLOATVAL    shift, and go to state 57
+
+    value                go to state 58
+    primary              go to state 111
+    term                 go to state 63
+    column_reference     go to state 64
+    function_name        go to state 65
+    column_name_or_star  go to state 66
+    table_name           go to state 67
+    column_name          go to state 68
+
+
+state 85
+
+   63 mulexp: mulexp '*' . primary
+
+    TOKEN_NULL  shift, and go to state 45
+    COUNT       shift, and go to state 46
+    SUM         shift, and go to state 47
+    AVG         shift, and go to state 48
+    MIN         shift, and go to state 49
+    MAX         shift, and go to state 50
+    NAME        shift, and go to state 51
+    STRINGVAL   shift, and go to state 52
+    '('         shift, and go to state 53
+    '-'         shift, and go to state 54
+    '*'         shift, and go to state 55
+    INTVAL      shift, and go to state 56
+    FLOATVAL    shift, and go to state 57
+
+    value                go to state 58
+    primary              go to state 112
+    term                 go to state 63
+    column_reference     go to state 64
+    function_name        go to state 65
+    column_name_or_star  go to state 66
+    table_name           go to state 67
+    column_name          go to state 68
+
+
+state 86
+
+   64 mulexp: mulexp '/' . primary
+
+    TOKEN_NULL  shift, and go to state 45
+    COUNT       shift, and go to state 46
+    SUM         shift, and go to state 47
+    AVG         shift, and go to state 48
+    MIN         shift, and go to state 49
+    MAX         shift, and go to state 50
+    NAME        shift, and go to state 51
+    STRINGVAL   shift, and go to state 52
+    '('         shift, and go to state 53
+    '-'         shift, and go to state 54
+    '*'         shift, and go to state 55
+    INTVAL      shift, and go to state 56
+    FLOATVAL    shift, and go to state 57
+
+    value                go to state 58
+    primary              go to state 113
+    term                 go to state 63
+    column_reference     go to state 64
+    function_name        go to state 65
+    column_name_or_star  go to state 66
+    table_name           go to state 67
+    column_name          go to state 68
+
+
+state 87
+
+   73 term: function_name '(' . expression ')'
+
+    TOKEN_NULL  shift, and go to state 45
+    COUNT       shift, and go to state 46
+    SUM         shift, and go to state 47
+    AVG         shift, and go to state 48
+    MIN         shift, and go to state 49
+    MAX         shift, and go to state 50
+    NAME        shift, and go to state 51
+    STRINGVAL   shift, and go to state 52
+    '('         shift, and go to state 53
+    '-'         shift, and go to state 54
+    '*'         shift, and go to state 55
+    INTVAL      shift, and go to state 56
+    FLOATVAL    shift, and go to state 57
+
+    value                go to state 58
+    expression           go to state 114
+    mulexp               go to state 61
+    primary              go to state 62
+    term                 go to state 63
+    column_reference     go to state 64
+    function_name        go to state 65
+    column_name_or_star  go to state 66
+    table_name           go to state 67
+    column_name          go to state 68
+
+
+state 88
+
+   75 column_reference: table_name '.' . column_name_or_star
+
+    NAME  shift, and go to state 91
+    '*'   shift, and go to state 55
+
+    column_name_or_star  go to state 115
+    column_name          go to state 68
+
+
+state 89
+
+   13 show_index: SHOW INDEX FROM table_name opt_semicolon .
+
+    $default  reduce using rule 13 (show_index)
+
+
+state 90
+
+   41 create_index: CREATE INDEX index_name ON table_name . '(' column_name_list ')' opt_semicolon
+
+    '('  shift, and go to state 116
+
+
+state 91
+
+  102 column_name: NAME .
+
+    $default  reduce using rule 102 (column_name)
+
+
+state 92
+
+   19 create_table: CREATE TABLE table_name '(' column_name_type_list . ')' opt_semicolon
+   21 column_name_type_list: column_name_type_list . ',' column_name_type
+
+    ')'  shift, and go to state 117
+    ','  shift, and go to state 118
+
+
+state 93
+
+   20 column_name_type_list: column_name_type .
+
+    $default  reduce using rule 20 (column_name_type_list)
+
+
+state 94
+
+   22 column_name_type: column_name . column_type opt_constraint_list
+
+    INT       shift, and go to state 119
+    FLOAT     shift, and go to state 120
+    DOUBLE    shift, and go to state 121
+    CHAR      shift, and go to state 122
+    VARCHAR   shift, and go to state 123
+    TEXT      shift, and go to state 124
+    DATE      shift, and go to state 125
+    DATETIME  shift, and go to state 126
+
+    column_type  go to state 127
+
+
+state 95
+
+   43 opt_column_name_list: '(' column_name_list . ')'
+   46 column_name_list: column_name_list . ',' column_name
+
+    ')'  shift, and go to state 128
+    ','  shift, and go to state 129
+
+
+state 96
+
+   45 column_name_list: column_name .
+
+    $default  reduce using rule 45 (column_name_list)
+
+
+state 97
+
+   42 insert_into: INSERT INTO table_name opt_column_name_list VALUES . '(' value_list ')' opt_semicolon
+
+    '('  shift, and go to state 130
+
+
+state 98
+
+   67 primary: '(' expression ')' .
+
+    $default  reduce using rule 67 (primary)
+
+
+state 99
+
+   91 join: LEFT . opt_outer JOIN
+
+    OUTER  shift, and go to state 131
+
+    $default  reduce using rule 96 (opt_outer)
+
+    opt_outer  go to state 132
+
+
+state 100
+
+   92 join: RIGHT . opt_outer JOIN
+
+    OUTER  shift, and go to state 131
+
+    $default  reduce using rule 96 (opt_outer)
+
+    opt_outer  go to state 133
+
+
+state 101
+
+   93 join: FULL . opt_outer JOIN
+
+    OUTER  shift, and go to state 131
+
+    $default  reduce using rule 96 (opt_outer)
+
+    opt_outer  go to state 134
+
+
+state 102
+
+   94 join: NATURAL . JOIN
+
+    JOIN  shift, and go to state 135
+
+
+state 103
+
+   52 select: SELECT opt_distinct expression_list FROM table_list . opt_where_condition opt_top opt_limit opt_semicolon
+   84 table_list: table_list . default_join table_def opt_join_condition
+
+    WHERE  shift, and go to state 136
+    JOIN   shift, and go to state 137
+    CROSS  shift, and go to state 138
+    INNER  shift, and go to state 139
+    ','    shift, and go to state 140
+
+    $default  reduce using rule 107 (opt_where_condition)
+
+    default_join         go to state 141
+    opt_where_condition  go to state 142
+
+
+state 104
+
+   83 table_list: table_def .
+
+    $default  reduce using rule 83 (table_list)
+
+
+state 105
+
+   85 table_list: join . table_def opt_join_condition
+
+    NAME  shift, and go to state 25
+
+    table_def   go to state 143
+    table_name  go to state 106
+
+
+state 106
+
+   86 table_def: table_name . opt_alias
+
+    AS    shift, and go to state 79
+    NAME  shift, and go to state 80
+
+    $default  reduce using rule 59 (opt_alias)
+
+    opt_alias  go to state 144
+
+
+state 107
+
+   56 expression_list: expression_list ',' expression . opt_alias
+   60 expression: expression . '+' mulexp
+   61           | expression . '-' mulexp
+
+    AS    shift, and go to state 79
+    NAME  shift, and go to state 80
+    '+'   shift, and go to state 81
+    '-'   shift, and go to state 82
+
+    $default  reduce using rule 59 (opt_alias)
+
+    opt_alias  go to state 145
+
+
+state 108
+
+   57 opt_alias: AS NAME .
+
+    $default  reduce using rule 57 (opt_alias)
+
+
+state 109
+
+   60 expression: expression '+' mulexp .
+   63 mulexp: mulexp . '*' primary
+   64       | mulexp . '/' primary
+   65       | mulexp . CONCAT primary
+
+    CONCAT  shift, and go to state 84
+    '*'     shift, and go to state 85
+    '/'     shift, and go to state 86
+
+    $default  reduce using rule 60 (expression)
+
+
+state 110
+
+   61 expression: expression '-' mulexp .
+   63 mulexp: mulexp . '*' primary
+   64       | mulexp . '/' primary
+   65       | mulexp . CONCAT primary
+
+    CONCAT  shift, and go to state 84
+    '*'     shift, and go to state 85
+    '/'     shift, and go to state 86
+
+    $default  reduce using rule 61 (expression)
+
+
+state 111
+
+   65 mulexp: mulexp CONCAT primary .
+
+    $default  reduce using rule 65 (mulexp)
+
+
+state 112
+
+   63 mulexp: mulexp '*' primary .
+
+    $default  reduce using rule 63 (mulexp)
+
+
+state 113
+
+   64 mulexp: mulexp '/' primary .
+
+    $default  reduce using rule 64 (mulexp)
+
+
+state 114
+
+   60 expression: expression . '+' mulexp
+   61           | expression . '-' mulexp
+   73 term: function_name '(' expression . ')'
+
+    ')'  shift, and go to state 146
+    '+'  shift, and go to state 81
+    '-'  shift, and go to state 82
+
+
+state 115
+
+   75 column_reference: table_name '.' column_name_or_star .
+
+    $default  reduce using rule 75 (column_reference)
+
+
+state 116
+
+   41 create_index: CREATE INDEX index_name ON table_name '(' . column_name_list ')' opt_semicolon
+
+    NAME  shift, and go to state 91
+
+    column_name_list  go to state 147
+    column_name       go to state 96
+
+
+state 117
+
+   19 create_table: CREATE TABLE table_name '(' column_name_type_list ')' . opt_semicolon
+
+    ';'  shift, and go to state 34
+
+    $default  reduce using rule 105 (opt_semicolon)
+
+    opt_semicolon  go to state 148
+
+
+state 118
+
+   21 column_name_type_list: column_name_type_list ',' . column_name_type
+
+    NAME  shift, and go to state 91
+
+    column_name_type  go to state 149
+    column_name       go to state 94
+
+
+state 119
+
+   23 column_type: INT .
+
+    $default  reduce using rule 23 (column_type)
+
+
+state 120
+
+   24 column_type: FLOAT .
+
+    $default  reduce using rule 24 (column_type)
+
+
+state 121
+
+   25 column_type: DOUBLE .
+
+    $default  reduce using rule 25 (column_type)
+
+
+state 122
+
+   26 column_type: CHAR .
+
+    $default  reduce using rule 26 (column_type)
+
+
+state 123
+
+   27 column_type: VARCHAR .
+
+    $default  reduce using rule 27 (column_type)
+
+
+state 124
+
+   28 column_type: TEXT .
+
+    $default  reduce using rule 28 (column_type)
+
+
+state 125
+
+   29 column_type: DATE .
+
+    $default  reduce using rule 29 (column_type)
+
+
+state 126
+
+   30 column_type: DATETIME .
+
+    $default  reduce using rule 30 (column_type)
+
+
+state 127
+
+   22 column_name_type: column_name column_type . opt_constraint_list
+   31 column_type: column_type . '(' INTVAL ')'
+
+    NOT             shift, and go to state 150
+    UNIQUE          shift, and go to state 151
+    PRIMARY         shift, and go to state 152
+    DEFAULT         shift, and go to state 153
+    AUTO_INCREMENT  shift, and go to state 154
+    '('             shift, and go to state 155
+
+    $default  reduce using rule 33 (opt_constraint_list)
+
+    opt_constraint_list  go to state 156
+    constraint_list      go to state 157
+    constraint           go to state 158
+
+
+state 128
+
+   43 opt_column_name_list: '(' column_name_list ')' .
+
+    $default  reduce using rule 43 (opt_column_name_list)
+
+
+state 129
+
+   46 column_name_list: column_name_list ',' . column_name
+
+    NAME  shift, and go to state 91
+
+    column_name  go to state 159
+
+
+state 130
+
+   42 insert_into: INSERT INTO table_name opt_column_name_list VALUES '(' . value_list ')' opt_semicolon
+
+    STRINGVAL  shift, and go to state 52
+    INTVAL     shift, and go to state 56
+    FLOATVAL   shift, and go to state 57
+
+    value_list  go to state 160
+    value       go to state 161
+
+
+state 131
+
+   95 opt_outer: OUTER .
+
+    $default  reduce using rule 95 (opt_outer)
+
+
+state 132
+
+   91 join: LEFT opt_outer . JOIN
+
+    JOIN  shift, and go to state 162
+
+
+state 133
+
+   92 join: RIGHT opt_outer . JOIN
+
+    JOIN  shift, and go to state 163
+
+
+state 134
+
+   93 join: FULL opt_outer . JOIN
+
+    JOIN  shift, and go to state 164
+
+
+state 135
+
+   94 join: NATURAL JOIN .
+
+    $default  reduce using rule 94 (join)
+
+
+state 136
+
+  106 opt_where_condition: WHERE . condition
+
+    TOKEN_NULL  shift, and go to state 45
+    COUNT       shift, and go to state 46
+    SUM         shift, and go to state 47
+    AVG         shift, and go to state 48
+    MIN         shift, and go to state 49
+    MAX         shift, and go to state 50
+    NAME        shift, and go to state 51
+    STRINGVAL   shift, and go to state 52
+    '('         shift, and go to state 165
+    '-'         shift, and go to state 54
+    '*'         shift, and go to state 55
+    INTVAL      shift, and go to state 56
+    FLOATVAL    shift, and go to state 57
+
+    value                go to state 58
+    expression           go to state 166
+    mulexp               go to state 61
+    primary              go to state 62
+    term                 go to state 63
+    column_reference     go to state 64
+    function_name        go to state 65
+    column_name_or_star  go to state 66
+    table_name           go to state 67
+    column_name          go to state 68
+    condition            go to state 167
+    bool_term            go to state 168
+
+
+state 137
+
+   88 default_join: JOIN .
+
+    $default  reduce using rule 88 (default_join)
+
+
+state 138
+
+   89 default_join: CROSS . JOIN
+
+    JOIN  shift, and go to state 169
+
+
+state 139
+
+   90 default_join: INNER . JOIN
+
+    JOIN  shift, and go to state 170
+
+
+state 140
+
+   87 default_join: ',' .
+
+    $default  reduce using rule 87 (default_join)
+
+
+state 141
+
+   84 table_list: table_list default_join . table_def opt_join_condition
+
+    NAME  shift, and go to state 25
+
+    table_def   go to state 171
+    table_name  go to state 106
+
+
+state 142
+
+   52 select: SELECT opt_distinct expression_list FROM table_list opt_where_condition . opt_top opt_limit opt_semicolon
+
+    TOP  shift, and go to state 172
+
+    $default  reduce using rule 115 (opt_top)
+
+    opt_top  go to state 173
+
+
+state 143
+
+   85 table_list: join table_def . opt_join_condition
+
+    ON  shift, and go to state 174
+
+    $default  reduce using rule 98 (opt_join_condition)
+
+    opt_join_condition  go to state 175
+    join_condition      go to state 176
+
+
+state 144
+
+   86 table_def: table_name opt_alias .
+
+    $default  reduce using rule 86 (table_def)
+
+
+state 145
+
+   56 expression_list: expression_list ',' expression opt_alias .
+
+    $default  reduce using rule 56 (expression_list)
+
+
+state 146
+
+   73 term: function_name '(' expression ')' .
+
+    $default  reduce using rule 73 (term)
+
+
+state 147
+
+   41 create_index: CREATE INDEX index_name ON table_name '(' column_name_list . ')' opt_semicolon
+   46 column_name_list: column_name_list . ',' column_name
+
+    ')'  shift, and go to state 177
+    ','  shift, and go to state 129
+
+
+state 148
+
+   19 create_table: CREATE TABLE table_name '(' column_name_type_list ')' opt_semicolon .
+
+    $default  reduce using rule 19 (create_table)
+
+
+state 149
+
+   21 column_name_type_list: column_name_type_list ',' column_name_type .
+
+    $default  reduce using rule 21 (column_name_type_list)
+
+
+state 150
+
+   36 constraint: NOT . TOKEN_NULL
+
+    TOKEN_NULL  shift, and go to state 178
+
+
+state 151
+
+   37 constraint: UNIQUE .
+
+    $default  reduce using rule 37 (constraint)
+
+
+state 152
+
+   38 constraint: PRIMARY . KEY
+
+    KEY  shift, and go to state 179
+
+
+state 153
+
+   39 constraint: DEFAULT . value
+
+    STRINGVAL  shift, and go to state 52
+    INTVAL     shift, and go to state 56
+    FLOATVAL   shift, and go to state 57
+
+    value  go to state 180
+
+
+state 154
+
+   40 constraint: AUTO_INCREMENT .
+
+    $default  reduce using rule 40 (constraint)
+
+
+state 155
+
+   31 column_type: column_type '(' . INTVAL ')'
+
+    INTVAL  shift, and go to state 181
+
+
+state 156
+
+   22 column_name_type: column_name column_type opt_constraint_list .
+
+    $default  reduce using rule 22 (column_name_type)
+
+
+state 157
+
+   32 opt_constraint_list: constraint_list .
+
+    $default  reduce using rule 32 (opt_constraint_list)
+
+
+state 158
+
+   34 constraint_list: constraint .
+   35                | constraint . constraint_list
+
+    NOT             shift, and go to state 150
+    UNIQUE          shift, and go to state 151
+    PRIMARY         shift, and go to state 152
+    DEFAULT         shift, and go to state 153
+    AUTO_INCREMENT  shift, and go to state 154
+
+    $default  reduce using rule 34 (constraint_list)
+
+    constraint_list  go to state 182
+    constraint       go to state 158
+
+
+state 159
+
+   46 column_name_list: column_name_list ',' column_name .
+
+    $default  reduce using rule 46 (column_name_list)
+
+
+state 160
+
+   42 insert_into: INSERT INTO table_name opt_column_name_list VALUES '(' value_list . ')' opt_semicolon
+   48 value_list: value_list . ',' value
+
+    ')'  shift, and go to state 183
+    ','  shift, and go to state 184
+
+
+state 161
+
+   47 value_list: value .
+
+    $default  reduce using rule 47 (value_list)
+
+
+state 162
+
+   91 join: LEFT opt_outer JOIN .
+
+    $default  reduce using rule 91 (join)
+
+
+state 163
+
+   92 join: RIGHT opt_outer JOIN .
+
+    $default  reduce using rule 92 (join)
+
+
+state 164
+
+   93 join: FULL opt_outer JOIN .
+
+    $default  reduce using rule 93 (join)
+
+
+state 165
+
+   67 primary: '(' . expression ')'
+  111 bool_term: '(' . condition ')'
+
+    TOKEN_NULL  shift, and go to state 45
+    COUNT       shift, and go to state 46
+    SUM         shift, and go to state 47
+    AVG         shift, and go to state 48
+    MIN         shift, and go to state 49
+    MAX         shift, and go to state 50
+    NAME        shift, and go to state 51
+    STRINGVAL   shift, and go to state 52
+    '('         shift, and go to state 165
+    '-'         shift, and go to state 54
+    '*'         shift, and go to state 55
+    INTVAL      shift, and go to state 56
+    FLOATVAL    shift, and go to state 57
+
+    value                go to state 58
+    expression           go to state 185
+    mulexp               go to state 61
+    primary              go to state 62
+    term                 go to state 63
+    column_reference     go to state 64
+    function_name        go to state 65
+    column_name_or_star  go to state 66
+    table_name           go to state 67
+    column_name          go to state 68
+    condition            go to state 186
+    bool_term            go to state 168
+
+
+state 166
+
+   60 expression: expression . '+' mulexp
+   61           | expression . '-' mulexp
+  110 bool_term: expression . COMPARISON expression
+
+    COMPARISON  shift, and go to state 187
+    '+'         shift, and go to state 81
+    '-'         shift, and go to state 82
+
+
+state 167
+
+  106 opt_where_condition: WHERE condition .
+  109 condition: condition . bool_op bool_term
+
+    AND  shift, and go to state 188
+    OR   shift, and go to state 189
+
+    $default  reduce using rule 106 (opt_where_condition)
+
+    bool_op  go to state 190
+
+
+state 168
+
+  108 condition: bool_term .
+
+    $default  reduce using rule 108 (condition)
+
+
+state 169
+
+   89 default_join: CROSS JOIN .
+
+    $default  reduce using rule 89 (default_join)
+
+
+state 170
+
+   90 default_join: INNER JOIN .
+
+    $default  reduce using rule 90 (default_join)
+
+
+state 171
+
+   84 table_list: table_list default_join table_def . opt_join_condition
+
+    ON  shift, and go to state 174
+
+    $default  reduce using rule 98 (opt_join_condition)
+
+    opt_join_condition  go to state 191
+    join_condition      go to state 176
+
+
+state 172
+
+  114 opt_top: TOP . INTVAL
+
+    INTVAL  shift, and go to state 192
+
+
+state 173
+
+   52 select: SELECT opt_distinct expression_list FROM table_list opt_where_condition opt_top . opt_limit opt_semicolon
+
+    LIMIT  shift, and go to state 193
+
+    $default  reduce using rule 117 (opt_limit)
+
+    opt_limit  go to state 194
+
+
+state 174
+
+   99 join_condition: ON . condition
+
+    TOKEN_NULL  shift, and go to state 45
+    COUNT       shift, and go to state 46
+    SUM         shift, and go to state 47
+    AVG         shift, and go to state 48
+    MIN         shift, and go to state 49
+    MAX         shift, and go to state 50
+    NAME        shift, and go to state 51
+    STRINGVAL   shift, and go to state 52
+    '('         shift, and go to state 165
+    '-'         shift, and go to state 54
+    '*'         shift, and go to state 55
+    INTVAL      shift, and go to state 56
+    FLOATVAL    shift, and go to state 57
+
+    value                go to state 58
+    expression           go to state 166
+    mulexp               go to state 61
+    primary              go to state 62
+    term                 go to state 63
+    column_reference     go to state 64
+    function_name        go to state 65
+    column_name_or_star  go to state 66
+    table_name           go to state 67
+    column_name          go to state 68
+    condition            go to state 195
+    bool_term            go to state 168
+
+
+state 175
+
+   85 table_list: join table_def opt_join_condition .
+
+    $default  reduce using rule 85 (table_list)
+
+
+state 176
+
+   97 opt_join_condition: join_condition .
+
+    $default  reduce using rule 97 (opt_join_condition)
+
+
+state 177
+
+   41 create_index: CREATE INDEX index_name ON table_name '(' column_name_list ')' . opt_semicolon
+
+    ';'  shift, and go to state 34
+
+    $default  reduce using rule 105 (opt_semicolon)
+
+    opt_semicolon  go to state 196
+
+
+state 178
+
+   36 constraint: NOT TOKEN_NULL .
+
+    $default  reduce using rule 36 (constraint)
+
+
+state 179
+
+   38 constraint: PRIMARY KEY .
+
+    $default  reduce using rule 38 (constraint)
+
+
+state 180
+
+   39 constraint: DEFAULT value .
+
+    $default  reduce using rule 39 (constraint)
+
+
+state 181
+
+   31 column_type: column_type '(' INTVAL . ')'
+
+    ')'  shift, and go to state 197
+
+
+state 182
+
+   35 constraint_list: constraint constraint_list .
+
+    $default  reduce using rule 35 (constraint_list)
+
+
+state 183
+
+   42 insert_into: INSERT INTO table_name opt_column_name_list VALUES '(' value_list ')' . opt_semicolon
+
+    ';'  shift, and go to state 34
+
+    $default  reduce using rule 105 (opt_semicolon)
+
+    opt_semicolon  go to state 198
+
+
+state 184
+
+   48 value_list: value_list ',' . value
+
+    STRINGVAL  shift, and go to state 52
+    INTVAL     shift, and go to state 56
+    FLOATVAL   shift, and go to state 57
+
+    value  go to state 199
+
+
+state 185
+
+   60 expression: expression . '+' mulexp
+   61           | expression . '-' mulexp
+   67 primary: '(' expression . ')'
+  110 bool_term: expression . COMPARISON expression
+
+    COMPARISON  shift, and go to state 187
+    ')'         shift, and go to state 98
+    '+'         shift, and go to state 81
+    '-'         shift, and go to state 82
+
+
+state 186
+
+  109 condition: condition . bool_op bool_term
+  111 bool_term: '(' condition . ')'
+
+    AND  shift, and go to state 188
+    OR   shift, and go to state 189
+    ')'  shift, and go to state 200
+
+    bool_op  go to state 190
+
+
+state 187
+
+  110 bool_term: expression COMPARISON . expression
+
+    TOKEN_NULL  shift, and go to state 45
+    COUNT       shift, and go to state 46
+    SUM         shift, and go to state 47
+    AVG         shift, and go to state 48
+    MIN         shift, and go to state 49
+    MAX         shift, and go to state 50
+    NAME        shift, and go to state 51
+    STRINGVAL   shift, and go to state 52
+    '('         shift, and go to state 53
+    '-'         shift, and go to state 54
+    '*'         shift, and go to state 55
+    INTVAL      shift, and go to state 56
+    FLOATVAL    shift, and go to state 57
+
+    value                go to state 58
+    expression           go to state 201
+    mulexp               go to state 61
+    primary              go to state 62
+    term                 go to state 63
+    column_reference     go to state 64
+    function_name        go to state 65
+    column_name_or_star  go to state 66
+    table_name           go to state 67
+    column_name          go to state 68
+
+
+state 188
+
+  112 bool_op: AND .
+
+    $default  reduce using rule 112 (bool_op)
+
+
+state 189
+
+  113 bool_op: OR .
+
+    $default  reduce using rule 113 (bool_op)
+
+
+state 190
+
+  109 condition: condition bool_op . bool_term
+
+    TOKEN_NULL  shift, and go to state 45
+    COUNT       shift, and go to state 46
+    SUM         shift, and go to state 47
+    AVG         shift, and go to state 48
+    MIN         shift, and go to state 49
+    MAX         shift, and go to state 50
+    NAME        shift, and go to state 51
+    STRINGVAL   shift, and go to state 52
+    '('         shift, and go to state 165
+    '-'         shift, and go to state 54
+    '*'         shift, and go to state 55
+    INTVAL      shift, and go to state 56
+    FLOATVAL    shift, and go to state 57
+
+    value                go to state 58
+    expression           go to state 166
+    mulexp               go to state 61
+    primary              go to state 62
+    term                 go to state 63
+    column_reference     go to state 64
+    function_name        go to state 65
+    column_name_or_star  go to state 66
+    table_name           go to state 67
+    column_name          go to state 68
+    bool_term            go to state 202
+
+
+state 191
+
+   84 table_list: table_list default_join table_def opt_join_condition .
+
+    $default  reduce using rule 84 (table_list)
+
+
+state 192
+
+  114 opt_top: TOP INTVAL .
+
+    $default  reduce using rule 114 (opt_top)
+
+
+state 193
+
+  116 opt_limit: LIMIT . INTVAL ',' INTVAL
+
+    INTVAL  shift, and go to state 203
+
+
+state 194
+
+   52 select: SELECT opt_distinct expression_list FROM table_list opt_where_condition opt_top opt_limit . opt_semicolon
+
+    ';'  shift, and go to state 34
+
+    $default  reduce using rule 105 (opt_semicolon)
+
+    opt_semicolon  go to state 204
+
+
+state 195
+
+   99 join_condition: ON condition .
+  109 condition: condition . bool_op bool_term
+
+    AND  shift, and go to state 188
+    OR   shift, and go to state 189
+
+    $default  reduce using rule 99 (join_condition)
+
+    bool_op  go to state 190
+
+
+state 196
+
+   41 create_index: CREATE INDEX index_name ON table_name '(' column_name_list ')' opt_semicolon .
+
+    $default  reduce using rule 41 (create_index)
+
+
+state 197
+
+   31 column_type: column_type '(' INTVAL ')' .
+
+    $default  reduce using rule 31 (column_type)
+
+
+state 198
+
+   42 insert_into: INSERT INTO table_name opt_column_name_list VALUES '(' value_list ')' opt_semicolon .
+
+    $default  reduce using rule 42 (insert_into)
+
+
+state 199
+
+   48 value_list: value_list ',' value .
+
+    $default  reduce using rule 48 (value_list)
+
+
+state 200
+
+  111 bool_term: '(' condition ')' .
+
+    $default  reduce using rule 111 (bool_term)
+
+
+state 201
+
+   60 expression: expression . '+' mulexp
+   61           | expression . '-' mulexp
+  110 bool_term: expression COMPARISON expression .
+
+    '+'  shift, and go to state 81
+    '-'  shift, and go to state 82
+
+    $default  reduce using rule 110 (bool_term)
+
+
+state 202
+
+  109 condition: condition bool_op bool_term .
+
+    $default  reduce using rule 109 (condition)
+
+
+state 203
+
+  116 opt_limit: LIMIT INTVAL . ',' INTVAL
+
+    ','  shift, and go to state 205
+
+
+state 204
+
+   52 select: SELECT opt_distinct expression_list FROM table_list opt_where_condition opt_top opt_limit opt_semicolon .
+
+    $default  reduce using rule 52 (select)
+
+
+state 205
+
+  116 opt_limit: LIMIT INTVAL ',' . INTVAL
+
+    INTVAL  shift, and go to state 206
+
+
+state 206
+
+  116 opt_limit: LIMIT INTVAL ',' INTVAL .
+
+    $default  reduce using rule 116 (opt_limit)

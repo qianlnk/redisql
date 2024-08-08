@@ -3,17 +3,19 @@ package main
 import (
 	"bufio"
 	"fmt"
+
 	//redigo "github.com/garyburd/redigo/redis"
 	"os"
-	"qianno.xie/redisql"
 	"strconv"
 	"strings"
+
+	"github.com/qianlnk/redisql"
 )
 
 const (
 	WELCOME_INFO = "Welcome to the REDISQL monitor. Command end with '\\n'.\n" +
 		"server version: 1.0.0\n\n" +
-		"author: qianno.xie\n" +
+		"author: github.com/qianlnk\n" +
 		"github: github.com/qianlnk\n" +
 		"email:  qianlnk@163.com\n\n" +
 		"Type 'help' or '\\h' for help.\n\n"

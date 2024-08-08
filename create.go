@@ -3,9 +3,10 @@ package redisql
 import (
 	"errors"
 	"fmt"
-	redigo "github.com/garyburd/redigo/redis"
 	"strings"
 	"time"
+
+	redigo "github.com/garyburd/redigo/redis"
 )
 
 //how to use?

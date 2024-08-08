@@ -4,9 +4,10 @@ import (
 	"container/list"
 	"errors"
 	"fmt"
-	redigo "github.com/garyburd/redigo/redis"
 	"strings"
 	"time"
+
+	redigo "github.com/garyburd/redigo/redis"
 )
 
 func getConn() redigo.Conn {
@@ -15,7 +16,7 @@ func getConn() redigo.Conn {
 	return conn
 }
 
-//database operation
+// database operation
 func existsDatabase(dbname string) bool {
 	conn := getConn()
 	defer conn.Close()
@@ -100,7 +101,7 @@ func getTableNumber() (int, error) {
 	return num, nil
 }
 
-//table opertion
+// table opertion
 func existsTable(tablename string) bool {
 	conn := getConn()
 	defer conn.Close()
@@ -148,7 +149,7 @@ func getNextConditionSn() (int, error) {
 	return cdtSn, nil
 }
 
-//field opertion
+// field opertion
 func existsField(tablename, fieldname string) bool {
 	conn := getConn()
 	defer conn.Close()
@@ -169,7 +170,7 @@ func getFieldType(tablename, fieldname string) (string, error) {
 	return redigo.String(conn.Do("HGET", fmt.Sprintf(REDISQL_FIELDS, database, tablename), fieldname))
 }
 
-//index opertion
+// index opertion
 func existsIndex(tablename, indexname string) bool {
 	conn := getConn()
 	defer conn.Close()
@@ -205,7 +206,7 @@ func getIndexs(tablename string) (map[string][]string, error) {
 	return indexs, nil
 }
 
-//return res when res int array1 and array2
+// return res when res int array1 and array2
 func inter(array1, array2 []string) []string {
 	var arrRes []string
 	for _, v1 := range array1 {
@@ -219,7 +220,7 @@ func inter(array1, array2 []string) []string {
 	return arrRes
 }
 
-//return res when res in array1 or array2
+// return res when res in array1 or array2
 func union(array1, array2 []string) []string {
 	var arrRes []string
 	arrRes = append(arrRes, array1...)
@@ -227,7 +228,7 @@ func union(array1, array2 []string) []string {
 	return arrRes
 }
 
-//return res when res in array1 but not in array2
+// return res when res in array1 but not in array2
 func outer(array1, array2 []string) []string {
 	var arrRes []string
 	for _, v1 := range array1 {
@@ -238,7 +239,7 @@ func outer(array1, array2 []string) []string {
 	return arrRes
 }
 
-//judge is sub in array
+// judge is sub in array
 func inarray(array []string, sub string) bool {
 	for _, v := range array {
 		if sub == v {
@@ -248,7 +249,7 @@ func inarray(array []string, sub string) bool {
 	return false
 }
 
-//create stack
+// create stack
 type stack struct {
 	s *list.List
 }
@@ -273,7 +274,6 @@ func (s *stack) GetPOP() string {
 	return res.Value.(string)
 }
 
-//
 func Compare(oldsign, newsign string) int {
 	switch oldsign {
 	case "#":

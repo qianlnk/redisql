@@ -2,8 +2,9 @@ package main
 
 import (
 	"fmt"
-	"qianno.xie/redisql"
 	"time"
+
+	"github.com/qianlnk/redisql"
 )
 
 func main() {

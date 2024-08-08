@@ -3,9 +3,10 @@ package redisql
 import (
 	"errors"
 	"fmt"
-	"github.com/garyburd/redigo/redis"
 	"strings"
 	"time"
+
+	"github.com/garyburd/redigo/redis"
 )
 
 func Connect(server, port, password, protocol string, idleMax, idleTimeput int) {

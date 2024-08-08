@@ -1,9 +1,10 @@
 package redisql
 
 import (
-	"qianno.xie/redisql/redisql_parse"
 	"strings"
 	"time"
+
+	"github.com/qianlnk/redisql/redisql_parse"
 )
 
 const (

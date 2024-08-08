@@ -2,8 +2,9 @@ package redisql_test
 
 import (
 	//"fmt"
-	"qianno.xie/redisql"
 	"testing"
+
+	"github.com/qianlnk/redisql"
 )
 
 func TestConnect(*testing.T) {
